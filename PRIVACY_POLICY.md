@@ -1,6 +1,6 @@
 ## MAME4droid 2024: Privacy policy
 
-Welcome to the MAME4droid 2024  Emulator app for Android!
+Welcome to the MAME4droid (Current)  Emulator app for Android!
 
 This is an open source Android app developed by Seleuco (D.Valdeita). The source code is available on GitHub; the app is also available on Google Play.
 
