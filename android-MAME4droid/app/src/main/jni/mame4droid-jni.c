@@ -346,7 +346,7 @@ char **myJNI_safGetNextDirEntry(int id)
         {
             jsize const length = (*env)->GetArrayLength(env, data);
 
-            args = (char*)malloc(sizeof(char*)*length);
+            args = malloc(sizeof(char*)*length);
 
             for(int index = 0; index < length; index++ )
             {
@@ -688,7 +688,7 @@ JNIEXPORT jint JNICALL Java_com_seleuco_mame4droid_Emulator_setMouseData
 JNIEXPORT jint JNICALL Java_com_seleuco_mame4droid_Emulator_setTouchData
         (JNIEnv *env, jclass c, jint i, jint touchAction, jfloat cx, jfloat cy){
 #ifdef DEBUG
-    __android_log_print(ANDROID_LOG_DEBUG, "mame4droid-jni", "setTouchData %d %d %d",touchAction, cx, cy);
+    __android_log_print(ANDROID_LOG_DEBUG, "mame4droid-jni", "setTouchData %d %d %d",touchAction, (int)cx, (int)cy);
 #endif
     if(setTouchData!=NULL)
         return setTouchData(i, touchAction, cx, cy);

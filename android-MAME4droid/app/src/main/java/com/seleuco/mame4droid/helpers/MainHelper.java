@@ -381,7 +381,7 @@ public class MainHelper {
                             + dir
                             + "' to store save states, cfg files and MAME assets.\n\nNote, copy or move your zipped ROMs under '"
                             + rompath
-                            + "' directory!\n\nIMPORTANT: MAME4droid 2024 uses only "+ mm.getString(R.string.mame_version) +" MAME romset, not 0.139.";
+                            + "' directory!\n\nIMPORTANT: MAME4droid (Current) uses only "+ mm.getString(R.string.mame_version) +" MAME romset, not 0.139.";
 
 			if(mm.getMainHelper().getDeviceDetected() == MainHelper.DEVICE_METAQUEST){
 				msg = "Welcome to MAME4droid for META Quest!\n\nYou should pair an XBOX One controller on your META Quest to be able to play games but you can play lightgun games with your touch controllers.\n\n"+msg;

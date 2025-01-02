@@ -730,7 +730,7 @@ public class Emulator {
 						Log.d("ACTION_VIEW","XX name: " + fileName);
 						Log.d("ACTION_VIEW","XX path: " + path);
 						extROM = true;
-						String msg = "Launching: " + fileName + "\nMAME4droid 2024 " + versionName + " by D.Valdeita (Seleuco)";
+						String msg = "Launching: " + fileName + "\nMAME4droid (Current) " + versionName + " by D.Valdeita (Seleuco)";
 						new WarnWidget.WarnWidgetHelper(mm, msg, 3, Color.GREEN, true);
 					}
 				}
