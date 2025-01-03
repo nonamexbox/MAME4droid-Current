@@ -1,6 +1,6 @@
 # MAME4droid-Current
 
-MAME4droid (current)is developed by David Valdeita (Seleuco) as a port of the MAME 0.273 emulator by MAMEDev and contributors. It emulates arcade games and systems like ZX Spectrum, Amstrad CPC, MSX etc. This version of MAME support over 40000 different ROMs.
+MAME4droid (current) is developed by David Valdeita (Seleuco) as a port of the MAME 0.273 emulator by MAMEDev and contributors. It emulates arcade games and systems like ZX Spectrum, Amstrad CPC, MSX etc. This version of MAME support over 40000 different ROMs.
 
 * MAME4droid is an EMULATOR and DOES NOT INCLUDE ROMS OR COPYRIGHTED MATERIAL OF ANY KIND. 
 
