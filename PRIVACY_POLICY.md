@@ -1,4 +1,4 @@
-## MAME4droid 2024: Privacy policy
+## MAME4droid (Current): Privacy policy
 
 Welcome to the MAME4droid (Current)  Emulator app for Android!
 
