@@ -215,6 +215,27 @@
 		<item>10</item>
 	</string-array>
 
+	<string-array name="pref_osd_numprocessors_options">
+		<item>auto</item>
+		<item>1</item>
+		<item>2</item>
+		<item>4</item>
+		<item>8</item>
+		<item>16</item>
+		<item>32</item>
+		<item>64</item>
+	</string-array>
+	<string-array name="pref_osd_numprocessors_values">
+		<item>-1</item>
+		<item>1</item>
+		<item>2</item>
+		<item>4</item>
+		<item>8</item>
+		<item>16</item>
+		<item>32</item>
+		<item>64</item>
+	</string-array>
+
     <string-array name="pref_buttons_size_options">
         <item>Smaller</item>
 	    <item>Small</item>

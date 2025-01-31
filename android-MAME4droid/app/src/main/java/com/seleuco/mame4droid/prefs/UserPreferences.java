@@ -104,6 +104,8 @@ public class UserPreferences extends PreferenceActivity implements OnSharedPrefe
 
 	protected ListPreference mPrefShader;
 
+	protected ListPreference mPrefNumProcessors;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 
@@ -143,6 +145,8 @@ public class UserPreferences extends PreferenceActivity implements OnSharedPrefe
 		mPrefInstPath = (EditTextPreference)getPreferenceScreen().findPreference(PrefsHelper.PREF_INSTALLATION_DIR);
 		mPrefShader= (ListPreference)getPreferenceScreen().findPreference(PrefsHelper.PREF_SHADER_EFFECT);
 		populateShaders(mPrefShader);
+
+		mPrefNumProcessors = (ListPreference)getPreferenceScreen().findPreference(PrefsHelper.PREF_EMU_NUM_PROCESSORS);
 	}
 
 
@@ -178,6 +182,7 @@ public class UserPreferences extends PreferenceActivity implements OnSharedPrefe
 	        mPrefNavbar.setSummary("Current value is '" + mPrefNavbar.getEntry()+"'");
 			mPrefInstPath.setSummary("Current value is '" + mPrefInstPath.getText()+"'");
 		    mPrefShader.setSummary("Current value is '" + mPrefShader.getEntry()+"'");
+		    mPrefNumProcessors.setSummary("Current value is '" + mPrefNumProcessors.getEntry()+"'");
 
 	        // Set up a listener whenever a key changes
 	        getPreferenceScreen().getSharedPreferences().registerOnSharedPreferenceChangeListener(this);
@@ -316,6 +321,10 @@ public class UserPreferences extends PreferenceActivity implements OnSharedPrefe
 				key.equals(PrefsHelper.PREF_SCRAPE_SNAPSHOTS) ||
 				key.equals(PrefsHelper.PREF_SCRAPE_ALL)){
 				ScraperHelper.reset();
+			}
+			else if(key.equals(PrefsHelper.PREF_EMU_NUM_PROCESSORS))
+			{
+				mPrefNumProcessors.setSummary("Current value is '" + mPrefNumProcessors.getEntry()+"'");
 			}
 
 	    }

@@ -24,6 +24,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <android/log.h>
+
 
 //============================================================
 //  osd_getenv
@@ -75,6 +77,43 @@ std::string osd_get_clipboard_text() noexcept
 std::error_condition osd_set_clipboard_text(std::string_view text) noexcept
 {
 	return std::errc::io_error; // TODO: better error code?
+}
+
+//============================================================
+//  osd_get_cache_line_size
+//============================================================
+
+std::pair<std::error_condition, unsigned> osd_get_cache_line_size() noexcept
+{
+	//return std::make_pair(std::error_condition(), 32u);
+	return std::make_pair(std::error_condition(), 64u);
+    //return std::make_pair(std::error_condition(), 128u);
+//#if defined(__linux__)
+/*
+	FILE *const f = std::fopen("/sys/devices/system/cpu/cpu0/cache/index0/coherency_line_size", "r");
+	if (!f)
+	{
+		__android_log_print(ANDROID_LOG_DEBUG, "osd", "cache_line_size error");
+		return std::make_pair(std::error_condition(errno, std::generic_category()), 0U);
+	}
+
+	unsigned result = 0;
+	auto const cnt = std::fscanf(f, "%u", &result);
+	std::fclose(f);
+	if (1 == cnt)
+	{
+		 __android_log_print(ANDROID_LOG_DEBUG, "osd", "cache_line_size %u", result);
+		return std::make_pair(std::error_condition(), result);
+	}
+	else
+	{
+		__android_log_print(ANDROID_LOG_DEBUG, "osd", "cache_line_size unknown");
+		return std::make_pair(std::errc::io_error, 0U);
+	}
+*/
+//#else // defined(__linux__)
+	//return std::make_pair(std::errc::not_supported, 0U);
+//#endif
 }
 
 

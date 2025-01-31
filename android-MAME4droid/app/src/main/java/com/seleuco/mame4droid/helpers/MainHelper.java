@@ -498,8 +498,8 @@ public class MainHelper {
 		Emulator.setValue(Emulator.DRC_USE_C,
 			prefsHelper.isDRCUseC() ? 1 : 0);
 
-		Emulator.setValue(Emulator.ONE_PROCESSOR,
-			prefsHelper.isOneProcessor() ? 1 : 0);
+		Emulator.setValue(Emulator.NUM_PROCESSORS,
+			prefsHelper.getNumProcessors());
 
 		Emulator.setValue(Emulator.SIMPLE_UI,
 			prefsHelper.isSimpleUI() ? 1 : 0);

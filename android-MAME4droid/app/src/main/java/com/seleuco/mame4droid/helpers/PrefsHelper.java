@@ -71,9 +71,9 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 	final static public String PREF_EMU_AUTO_FRAMESKIP = "PREF_EMU_AUTO_FRAMESKIP";
 	final static public String CHEATS = "CHEATS";
 	final static public String SKIP_GAMEINFO = "SKIP_GAMEINFO";
-	final static public String PREF_EMU_DISABLE_DRC = "PREF_EMU_DISABLE_DRC_2";
-	final static public String PREF_EMU_DRC_USR_C = "PREF_EMU_DRC_USR_C";
-	final static public String PREF_EMU_ONE_PROCESSOR = "PREF_EMU_ONE_PROCESSOR";
+	final static public String PREF_EMU_DISABLE_DRC = "PREF_EMU_DISABLE_DRC_4";
+	final static public String PREF_EMU_DRC_USR_C = "PREF_EMU_DRC_USE_C_4";
+	final static public String PREF_EMU_NUM_PROCESSORS = "PREF_EMU_NUM_PROCESSORS";
 	final static public String PREF_MAMEINI = "PREF_MAMEINI";
 	final static public String PREF_SPEED_HACKS = "PREF_SPEED_HACKS";
 	final static public String PREF_HISCORE = "PREF_HISCORE";
@@ -340,15 +340,15 @@ public class PrefsHelper implements OnSharedPreferenceChangeListener {
 	}
 
 	public boolean isDisabledDRC() {
-		return getSharedPreferences().getBoolean(PREF_EMU_DISABLE_DRC, true);
+		return getSharedPreferences().getBoolean(PREF_EMU_DISABLE_DRC, false);
 	}
 
 	public boolean isDRCUseC() {
-		return getSharedPreferences().getBoolean(PREF_EMU_DRC_USR_C, true);
+		return getSharedPreferences().getBoolean(PREF_EMU_DRC_USR_C, false);
 	}
 
-	public boolean isOneProcessor() {
-		return getSharedPreferences().getBoolean(PREF_EMU_ONE_PROCESSOR, true);
+	public int getNumProcessors() {
+		return Integer.valueOf(getSharedPreferences().getString(PREF_EMU_NUM_PROCESSORS, "-1")).intValue();
 	}
 
 	public boolean isAutosave() {

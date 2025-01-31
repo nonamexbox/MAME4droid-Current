@@ -131,7 +131,7 @@ public class Emulator {
 
 	final static public int KEYBOARD = 66;
 
-	final static public int ONE_PROCESSOR = 67;
+	final static public int NUM_PROCESSORS = 67;
 	final static public int NODEADZONEANDSAT = 68;
 	final static public int MAMEINI = 69;
 	final static public int SPEED_HACKS = 70;

@@ -78,7 +78,7 @@ static JavaVM *jVM = NULL;
 static void *libdl = NULL;
 static jclass cEmulator = NULL;
 
-static jobject videoBuffer=NULL;//es un ByteBuffer wrappeando el buffer de video en la libreria
+static jobject videoBuffer=NULL;//es un ByteBuffer wrappeando el buffer de video en la librería
 
 static jbyteArray jbaAudioBuffer = NULL;
 

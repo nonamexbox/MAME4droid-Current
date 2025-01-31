@@ -20,6 +20,7 @@ include $(CLEAR_VARS)
 LOCAL_LDLIBS    := -ldl -llog
 LOCAL_MODULE    := mame4droid-jni
 LOCAL_SRC_FILES := mame4droid-jni.c
+LOCAL_LDFLAGS += "-Wl,-z,max-page-size=16384" #para Android NDK r26 and lowe y soporte paginas de 16KB
 
 
 #traverse all the directory and subdirectory

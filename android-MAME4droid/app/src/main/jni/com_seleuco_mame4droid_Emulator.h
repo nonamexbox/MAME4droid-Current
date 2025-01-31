@@ -79,8 +79,8 @@ extern "C" {
 #define com_seleuco_mame4droid_Emulator_IS_MOUSE 65L
 #undef com_seleuco_mame4droid_Emulator_KEYBOARD
 #define com_seleuco_mame4droid_Emulator_KEYBOARD 66L
-#undef com_seleuco_mame4droid_Emulator_ONE_PROCESSOR
-#define com_seleuco_mame4droid_Emulator_ONE_PROCESSOR 67L
+#undef com_seleuco_mame4droid_Emulator_NUM_PROCESSORS
+#define com_seleuco_mame4droid_Emulator_NUM_PROCESSORS 67L
 #undef com_seleuco_mame4droid_Emulator_NODEADZONEANDSAT
 #define com_seleuco_mame4droid_Emulator_NODEADZONEANDSAT 68L
 #undef com_seleuco_mame4droid_Emulator_MAMEINI

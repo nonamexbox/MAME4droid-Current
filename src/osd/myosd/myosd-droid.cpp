@@ -120,7 +120,7 @@ static int myosd_droid_is_paused_in_update = 0;
 static int myosd_droid_doing_paused_in_update = 0;
 static int myosd_droid_is_paused_in_emu = 0;
 
-static int myosd_one_processor = 0;
+static int myosd_num_processors = -1;
 static int myosd_droid_no_dzsat = 0;
 static int myosd_speed_hacks = 0;
 static int myosd_droid_init_game = 0;
@@ -411,8 +411,8 @@ void myosd_droid_setMyValue(int key, int i, int value) {
         case com_seleuco_mame4droid_Emulator_KEYBOARD:
             myosd_droid_keyboard_enable = value;
             break;
-        case com_seleuco_mame4droid_Emulator_ONE_PROCESSOR:
-            myosd_one_processor = value;
+        case com_seleuco_mame4droid_Emulator_NUM_PROCESSORS:
+            myosd_num_processors = value;
             break;
         case com_seleuco_mame4droid_Emulator_NODEADZONEANDSAT:
             myosd_droid_no_dzsat = value;
@@ -1336,14 +1336,16 @@ int myosd_droid_main(int argc, char **argv) {
         args[n] =  myosd_droid_overlay_effect.c_str();
         n++;
     }
-/* now fixed on upstream
-    if(myosd_one_processor) {
+
+
+    if(myosd_num_processors!=-1) {
+        __android_log_print(ANDROID_LOG_DEBUG, "libMAME4droid.so", "Num processors: %d",myosd_num_processors);
         args[n] = "-numprocessors";
         n++;
-        args[n] = "1"; //thats way dkong works
+        args[n] = std::to_string(myosd_num_processors).c_str();
         n++;
     }
-*/
+
     args[n] = "-ui_active";
     n++;
 
@@ -1364,12 +1366,24 @@ int myosd_droid_main(int argc, char **argv) {
     }
 
     if(myosd_droid_disable_drc) {
+        __android_log_print(ANDROID_LOG_DEBUG, "libMAME4droid.so", "NO DRC");
         args[n] = "-nodrc";
         n++;
     }
 
     if(!myosd_droid_disable_drc && myosd_droid_enable_drc_use_c) {
+        __android_log_print(ANDROID_LOG_DEBUG, "libMAME4droid.so", "DRC but C backend");
+        args[n] = "-drc";
+        n++;
         args[n] = "-drc_use_c";
+        n++;
+    }
+
+    if(!myosd_droid_disable_drc && !myosd_droid_enable_drc_use_c) {
+        __android_log_print(ANDROID_LOG_DEBUG, "libMAME4droid.so", "DRC");
+        args[n] = "-drc";
+        n++;
+        args[n] = "-nodrc_use_c";
         n++;
     }
 

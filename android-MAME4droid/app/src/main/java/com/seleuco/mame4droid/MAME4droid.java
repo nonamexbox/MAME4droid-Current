@@ -49,11 +49,16 @@ import android.app.Dialog;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Insets;
+import android.graphics.Rect;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.DisplayCutout;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.WindowInsets;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
 
@@ -67,6 +72,8 @@ import com.seleuco.mame4droid.input.GameController;
 import com.seleuco.mame4droid.input.InputHandler;
 import com.seleuco.mame4droid.views.IEmuView;
 import com.seleuco.mame4droid.views.InputView;
+
+import java.util.List;
 
 public class MAME4droid extends Activity {
 
@@ -194,9 +201,10 @@ public class MAME4droid extends Activity {
 			this.setRequestedOrientation(mode);
 		}
 
-		if (getPrefsHelper().isNotchUsed()) {
+		if (getPrefsHelper().isNotchUsed() && Build.VERSION.SDK_INT < Build.VERSION_CODES.VANILLA_ICE_CREAM) {
 			getWindow().getAttributes().layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
 		}
+
 		inputHandler.unsetInputListeners();
 
 		Emulator.setPortraitFull(getPrefsHelper().isPortraitFullscreen());
@@ -238,6 +246,16 @@ public class MAME4droid extends Activity {
 		View frame = this.findViewById(R.id.EmulatorFrame);
 		frame.setOnTouchListener(inputHandler);
 
+		if (!getPrefsHelper().isNotchUsed() &&  Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+			frame.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+				@Override
+				public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
+					 Insets bars = insets.getInsets(WindowInsets.Type.displayCutout() | WindowInsets.Type.systemBars());
+					v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+					return WindowInsets.CONSUMED;
+				}
+			});
+		}
 
 		inputHandler.setInputListeners();
 	}

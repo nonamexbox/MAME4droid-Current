@@ -54,6 +54,7 @@ extern int myosd_zoom_to_window;
 //  OPTIONS
 //============================================================
 
+
 static const options_entry s_option_entries[] =
 {
     //  { OPTION_INIPATH,       INI_PATH,   OPTION_STRING,     "path to ini files" },
@@ -158,7 +159,8 @@ extern "C" void myosd_speed_hack()
                 }
                 else if (name.find("SH-2") != std::string::npos)
                 {
-                    cpu_overclock = 55;
+                    //cpu_overclock = 55;
+                    cpu_overclock = 90;//now we have DRC
                 }
                 else
                 {
