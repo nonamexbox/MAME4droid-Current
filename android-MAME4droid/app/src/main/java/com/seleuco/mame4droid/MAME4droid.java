@@ -250,7 +250,11 @@ public class MAME4droid extends Activity {
 			frame.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
 				@Override
 				public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
-					 Insets bars = insets.getInsets(WindowInsets.Type.displayCutout() | WindowInsets.Type.systemBars());
+					 Insets bars = insets.getInsets(WindowInsets.Type.displayCutout()
+
+					/*	 | WindowInsets.Type.systemBars() */
+
+					 );
 					v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
 					return WindowInsets.CONSUMED;
 				}
