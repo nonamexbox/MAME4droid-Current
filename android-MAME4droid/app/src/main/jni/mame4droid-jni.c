@@ -210,25 +210,14 @@ void myJNI_closeAudio()
 void myJNI_openAudio(int rate, int stereo)
 {
     JNIEnv *env;
+    jobject tmp;
     (*jVM)->GetEnv(jVM, (void**) &env, JNI_VERSION_1_4);
 
 #ifdef DEBUG
     __android_log_print(ANDROID_LOG_DEBUG, "mame4droid-jni", "openAudio");
 #endif
 
-
     (*env)->CallStaticVoidMethod(env, cEmulator, android_openAudio, (jint)rate,(jboolean)stereo);
-}
-
-void myJNI_dumpAudio(void *buffer, int size)
-{
-    JNIEnv *env;
-    jobject tmp;
-    (*jVM)->GetEnv(jVM, (void**) &env, JNI_VERSION_1_4);
-
-#ifdef DEBUG
-    //__android_log_print(ANDROID_LOG_DEBUG, "mame4droid-jni", "dumpAudio %ld %d",buffer, size);
-#endif
 
     if(jbaAudioBuffer==NULL)
     {
@@ -237,10 +226,37 @@ void myJNI_dumpAudio(void *buffer, int size)
         jbaAudioBuffer=(jbyteArray)(*env)->NewGlobalRef(env, jbaAudioBuffer);
         (*env)->DeleteLocalRef(env, tmp);
     }
+}
+
+void myJNI_dumpAudio(void *buffer, int size)
+{
+    JNIEnv *env;
+    jint result = (*jVM)->GetEnv(jVM, (void**) &env, JNI_VERSION_1_4);
+    int attached = 0;
+
+    if (result == JNI_EDETACHED) {
+        result = (*jVM)->AttachCurrentThread(jVM, &env, NULL);
+        if (result == JNI_OK) {
+            attached = 1;
+        } else {
+#ifdef DEBUG
+            __android_log_print(ANDROID_LOG_ERROR, "mame4droid-jni", "Error attaching thread to JVM");
+#endif
+            return;
+        }
+    }
+
+#ifdef DEBUG
+    //__android_log_print(ANDROID_LOG_DEBUG, "mame4droid-jni", "dumpAudio %ld %d",buffer, size);
+#endif
 
     (*env)->SetByteArrayRegion(env, jbaAudioBuffer, 0, size, (jbyte *)buffer);
 
     (*env)->CallStaticVoidMethod(env, cEmulator, android_dumpAudio,jbaAudioBuffer,(jint)size);
+
+    if (attached) {
+        (*jVM)->DetachCurrentThread(jVM);
+    }
 }
 
 void myJNI_initInput()
