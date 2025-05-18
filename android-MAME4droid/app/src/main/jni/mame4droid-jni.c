@@ -231,19 +231,13 @@ void myJNI_openAudio(int rate, int stereo)
 void myJNI_dumpAudio(void *buffer, int size)
 {
     JNIEnv *env;
-    jint result = (*jVM)->GetEnv(jVM, (void**) &env, JNI_VERSION_1_4);
+    (*jVM)->GetEnv(jVM, (void**) &env, JNI_VERSION_1_4);
     int attached = 0;
 
-    if (result == JNI_EDETACHED) {
-        result = (*jVM)->AttachCurrentThread(jVM, &env, NULL);
-        if (result == JNI_OK) {
-            attached = 1;
-        } else {
-#ifdef DEBUG
-            __android_log_print(ANDROID_LOG_ERROR, "mame4droid-jni", "Error attaching thread to JVM");
-#endif
-            return;
-        }
+    if(env==NULL)
+    {
+        attached  = 1;
+        (*jVM)->AttachCurrentThread(jVM,(void *) &env, NULL);
     }
 
 #ifdef DEBUG

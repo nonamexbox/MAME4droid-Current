@@ -86,12 +86,23 @@ bool my_osd_interface::no_sound()
     return m_sample_rate == 0;
 }
 
+uint32_t my_osd_interface::sound_stream_sink_open(uint32_t node, std::string name, uint32_t rate){
+    osd_printf_verbose("my_osd_interface::sound_stream_sink_open");
+    sound_init();
+    return 1;
+}
+
+void my_osd_interface::sound_stream_close(uint32_t id){
+    osd_printf_verbose("my_osd_interface::sound_stream_close");
+    sound_exit();
+}
+
 void my_osd_interface::sound_stream_sink_update(
         uint32_t,
         int16_t const *buffer,
         int samples_this_frame)
 {
-    osd_printf_verbose("my_osd_interface::update_audio_stream: samples=%d attenuation=%d\n", samples_this_frame, m_attenuation);
+    osd_printf_verbose("my_osd_interface::update_audio_stream: samples=%d \n", samples_this_frame);
 
     if (m_sample_rate == 0 || m_callbacks.sound_play==NULL  || buffer==NULL)
         return;
@@ -100,7 +111,6 @@ void my_osd_interface::sound_stream_sink_update(
         //return;
 
     m_callbacks.sound_play((void*)buffer,samples_this_frame * sizeof(int16_t) * 2);
-
 }
 
 
