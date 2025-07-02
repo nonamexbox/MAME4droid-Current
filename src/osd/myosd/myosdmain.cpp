@@ -762,7 +762,7 @@ void my_osd_interface::init(running_machine &machine)
 
     video_init();
     input_init();
-    //sound_init();
+    sound_init();
 
     bool in_game = (&m_machine->system() != &GAME_NAME(___empty));
 
@@ -792,7 +792,7 @@ void my_osd_interface::machine_exit()
 
     video_exit();
     input_exit();
-    //sound_exit();
+    sound_exit();
 }
 
 //============================================================

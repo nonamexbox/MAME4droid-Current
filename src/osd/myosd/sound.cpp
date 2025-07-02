@@ -42,6 +42,9 @@ void my_osd_interface::sound_init()
     {
         m_callbacks.sound_init(m_sample_rate, 1);
     }
+
+    m_current_stream_id = 0;
+    m_next_stream_id = 1;
 }
 
 //============================================================
@@ -55,6 +58,7 @@ void my_osd_interface::sound_exit()
     {
         m_callbacks.sound_exit();
     }
+    m_current_stream_id = 0;
 }
 
 osd::audio_info my_osd_interface::sound_get_information()
@@ -64,20 +68,25 @@ osd::audio_info my_osd_interface::sound_get_information()
     result.m_default_sink = 1;
     result.m_default_source = 0;
     result.m_nodes.resize(1);
-    result.m_nodes[0].m_name = "";
+    result.m_nodes[0].m_name = "myosdsound";
+    result.m_nodes[0].m_display_name = "myosd sound";
     result.m_nodes[0].m_id = 1;
     result.m_nodes[0].m_rate.m_default_rate = 0; // Magic value meaning "use configured sample rate"
     result.m_nodes[0].m_rate.m_min_rate = 0;
     result.m_nodes[0].m_rate.m_max_rate = 0;
     result.m_nodes[0].m_sinks = 2;
     result.m_nodes[0].m_sources = 0;
-    result.m_nodes[0].m_port_names.push_back("L");
-    result.m_nodes[0].m_port_names.push_back("R");
-    result.m_nodes[0].m_port_positions.emplace_back(std::array<double, 3>({ -0.2, 0.0, 1.0 }));
-    result.m_nodes[0].m_port_positions.emplace_back(std::array<double, 3>({  0.2, 0.0, 1.0 }));
-    result.m_streams.resize(1);
-    result.m_streams[0].m_id = 1;
-    result.m_streams[0].m_node = 1;
+    result.m_nodes[0].m_port_names.reserve(2);
+    result.m_nodes[0].m_port_names.emplace_back("L");
+    result.m_nodes[0].m_port_names.emplace_back("R");
+    result.m_nodes[0].m_port_positions.reserve(2);
+    result.m_nodes[0].m_port_positions.emplace_back(osd::channel_position::FL());
+    result.m_nodes[0].m_port_positions.emplace_back(osd::channel_position::FR());
+    if (m_current_stream_id) {
+        result.m_streams.resize(1);
+        result.m_streams[0].m_id = m_current_stream_id;
+        result.m_streams[0].m_node = 1;
+    }
     return result;
 }
 
@@ -88,23 +97,29 @@ bool my_osd_interface::no_sound()
 
 uint32_t my_osd_interface::sound_stream_sink_open(uint32_t node, std::string name, uint32_t rate){
     osd_printf_verbose("my_osd_interface::sound_stream_sink_open");
-    sound_init();
-    return 1;
+    //sound_init();
+    if (m_current_stream_id)
+        return 0;
+
+    m_current_stream_id = m_next_stream_id++;
+    return m_current_stream_id;
 }
 
 void my_osd_interface::sound_stream_close(uint32_t id){
     osd_printf_verbose("my_osd_interface::sound_stream_close");
-    sound_exit();
+    //sound_exit();
+    if (id == m_current_stream_id)
+        m_current_stream_id = 0;
 }
 
 void my_osd_interface::sound_stream_sink_update(
-        uint32_t,
+        uint32_t id,
         int16_t const *buffer,
         int samples_this_frame)
 {
     osd_printf_verbose("my_osd_interface::update_audio_stream: samples=%d \n", samples_this_frame);
 
-    if (m_sample_rate == 0 || m_callbacks.sound_play==NULL  || buffer==NULL)
+    if (m_sample_rate == 0 || m_callbacks.sound_play==NULL  || buffer==NULL || id != m_current_stream_id)
         return;
 
     //if(machine().video().fastforward())
