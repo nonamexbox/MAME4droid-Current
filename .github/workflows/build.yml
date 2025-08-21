@@ -88,18 +88,18 @@ jobs:
           exit 1
         fi
 
-    # 构建
-    - name: Build with Gradle
-      run: |
-        echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
-        echo "ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
-        echo "PATH: $PATH"
-        ./gradlew assembleDebug --no-daemon --stacktrace
+# 构建
+- name: Build with Gradle
+  run: |
+    echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+    echo "ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
+    echo "PATH: $PATH"
+    ./gradlew assembleDebug --no-daemon --stacktrace
 
-    # 上传APK
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: MAME4droid-APK
-        path: android-MAME4droid/app/build/outputs/apk/debug/*.apk
-        retention
+# 上传APK
+- name: Upload APK
+  uses: actions/upload-artifact@v4
+  with:
+    name: MAME4droid-APK
+    path: android-MAME4droid/app/build/outputs/apk/debug/*.apk
+    retention-days: 1  # 修复后的正确语法
