@@ -13,6 +13,9 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        # 确保检出所有文件，包括隐藏文件
+        fetch-depth: 0
 
     - name: Setup Java 17
       uses: actions/setup-java@v4
@@ -25,19 +28,51 @@ jobs:
       with:
         ndk-version: '27.2.12479018'
 
+    - name: Verify file existence
+      run: |
+        # 列出所有文件，确认 build.sh 存在
+        echo "当前工作目录: $(pwd)"
+        echo "文件列表:"
+        ls -la
+        
+        # 确认 build.sh 存在
+        if [ ! -f "build.sh" ]; then
+          echo "错误: build.sh 文件不存在!"
+          exit 1
+        fi
+        
+        # 检查文件内容
+        echo "build.sh 内容:"
+        cat build.sh
+
     - name: Grant execute permission to build scripts
       run: |
-        chmod +x build.sh
-        chmod +x app/src/main/jni/build.sh || true
+        # 授予执行权限
+        chmod +x ./build.sh
+        
+        # 检查 jni 目录是否存在
+        if [ -d "app/src/main/jni" ]; then
+          echo "找到 jni 目录"
+          if [ -f "app/src/main/jni/build.sh" ]; then
+            chmod +x app/src/main/jni/build.sh
+            echo "已授予 app/src/main/jni/build.sh 执行权限"
+          else
+            echo "警告: app/src/main/jni/build.sh 不存在"
+          fi
+        else
+          echo "警告: app/src/main/jni 目录不存在"
+        fi
 
     - name: Build with Gradle
       run: |
+        # 设置环境变量
         export ANDROID_SDK_ROOT="$HOME/android-sdk"
         export ANDROID_NDK_HOME="$ANDROID_SDK_ROOT/ndk/27.2.12479018"
         export PATH="$PATH:$ANDROID_NDK_HOME"
+        
+        # 执行构建
         ./gradlew assembleDebug --no-daemon --stacktrace
 
-    # 修复点：使用 upload-artifact v4 而不是已弃用的 v3
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
