@@ -16,7 +16,7 @@ jobs:
       with:
         fetch-depth: 0
 
-    # 关键修复：使用本地 Gradle Wrapper
+    # 关键修复：使用正确的 Gradle Wrapper 设置方法
     - name: Setup Gradle Wrapper
       run: |
         cd android-MAME4droid
@@ -24,16 +24,18 @@ jobs:
         # 1. 确保目录存在
         mkdir -p gradle/wrapper
         
-        # 2. 使用本地 Gradle 生成 Wrapper
-        # 安装 Gradle
-        wget -q https://services.gradle.org/distributions/gradle-8.7-bin.zip
-        unzip -q gradle-8.7-bin.zip
-        export PATH="$PWD/gradle-8.7/bin:$PATH"
+        # 2. 直接下载官方 Gradle Wrapper 文件
+        wget -q https://raw.githubusercontent.com/gradle/gradle/master/gradlew -O gradlew
+        wget -q https://repo.maven.apache.org/maven2/org/grails/grails-gradle-wrapper/5.2.8/grails-gradle-wrapper-5.2.8.jar -O gradle/wrapper/gradle-wrapper.jar
+        wget -q https://raw.githubusercontent.com/gradle/gradle/master/gradle/wrapper/gradle-wrapper.properties -O gradle/wrapper/gradle-wrapper.properties
         
-        # 3. 生成 Gradle Wrapper
-        gradle wrapper --gradle-version 8.7
+        # 3. 设置执行权限
+        chmod +x gradlew
         
-        # 4. 验证文件
+        # 4. 修改 gradle.properties 文件（关键修复）
+        echo "org.gradle.jvmargs=-Xmx2048m" > gradle.properties
+        
+        # 5. 验证文件
         if [ ! -f "gradlew" ]; then
           echo "❌ 错误：gradlew 文件未创建"
           exit 1
@@ -127,7 +129,7 @@ jobs:
         # 确保gradlew有执行权限
         chmod +x gradlew
         
-        # 执行构建
+        # 执行构建（添加 --no-daemon 参数）
         ./gradlew assembleDebug --no-daemon --stacktrace
 
     # 上传APK
