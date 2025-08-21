@@ -16,17 +16,37 @@ jobs:
       with:
         fetch-depth: 0
 
-    # 关键修复：安装完整依赖
+    # 关键修复：添加缓存机制
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      id: deps-cache
+      with:
+        path: |
+          /usr/local/lib/android
+          ~/.gradle/caches
+        key: ${{ runner.os }}-deps-${{ hashFiles('**/dependencies.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-deps-
+
+    # 安装依赖（仅在缓存未命中时执行）
     - name: Install dependencies
+      if: steps.deps-cache.outputs.cache-hit != 'true'
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential python3-dev libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libsdl2-mixer-dev
+        sudo apt-get install -y build-essential python3-dev libsdl2-dev
         
         # 安装 Android NDK
         wget -q https://dl.google.com/android/repository/android-ndk-r27d-linux.zip
         unzip -q android-ndk-r27d-linux.zip
         rm android-ndk-r27d-linux.zip
-        echo "ANDROID_NDK_HOME=$PWD/android-ndk-r27d" >> $GITHUB_ENV
+        sudo mv android-ndk-r27d /usr/local/lib/android/
+        echo "ANDROID_NDK_HOME=/usr/local/lib/android/android-ndk-r27d" >> $GITHUB_ENV
+
+    # 关键修复：设置环境变量
+    - name: Set environment variables
+      run: |
+        echo "ANDROID_NDK_HOME=/usr/local/lib/android/android-ndk-r27d" >> $GITHUB_ENV
+        echo "PATH=$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH" >> $GITHUB_ENV
 
     # 下载 MAME 0.279 源码
     - name: Download MAME 0.279 source
@@ -37,29 +57,28 @@ jobs:
         mv mame-mame0279 mame-src
         echo "✅ MAME 0.279源码下载完成"
 
-    # 关键修复：使用正确的编译目标
+    # 关键修复：使用官方编译方法
     - name: Build MAME core library
       run: |
         cd mame-src
         
-        # 设置环境变量
-        export ANDROID_NDK_ROOT=$ANDROID_NDK_HOME
-        export PATH=$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH
+        # 1. 生成项目文件
+        make REGENIE=1 -f scripts/genie.lua osd=android targetos=android
         
-        # 关键修复：使用正确的目标名称
+        # 2. 编译核心库
         make TARGETOS=android TARGET=arcade SUBTARGET=mame OSD=android ARCHITECTURE=arm64 \
           CROSS_BUILD=1 \
           NOWERROR=1 \
           TOOLS=1 \
           -j4
         
-        # 验证生成的库文件
+        # 3. 验证生成的库文件
         if [ ! -f "mamearcadearm64.so" ]; then
           echo "❌ 错误：MAME核心库未生成"
           exit 1
         fi
         
-        # 复制到Android项目
+        # 4. 复制到Android项目
         mkdir -p ../android-MAME4droid/app/src/main/jniLibs/arm64-v8a
         cp mamearcadearm64.so ../android-MAME4droid/app/src/main/jniLibs/arm64-v8a/libMAME4droid.so
         echo "✅ MAME核心库生成成功（大小: $(du -h mamearcadearm64.so | cut -f1)）"
@@ -69,15 +88,15 @@ jobs:
       run: |
         cd android-MAME4droid
         
-        # 使用Gradle 8.9
+        # 1. 使用Gradle 8.9
         wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip -O gradle-bin.zip
         unzip -q gradle-bin.zip
         rm gradle-bin.zip
         
-        # 执行构建
+        # 2. 执行构建
         ./gradle-8.9/bin/gradle assembleDebug --no-daemon --stacktrace
         
-        # 验证APK大小
+        # 3. 验证APK大小
         APK_SIZE=$(du -h app/build/outputs/apk/debug/*.apk | cut -f1)
         echo "APK大小: $APK_SIZE"
         if [[ ! $APK_SIZE =~ M ]]; then
