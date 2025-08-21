@@ -16,7 +16,7 @@ jobs:
       with:
         fetch-depth: 0
 
-    # 关键修复：修复 Gradle Wrapper
+    # 关键修复：使用备用方案修复 Gradle Wrapper
     - name: Fix Gradle Wrapper
       run: |
         # 进入项目目录
@@ -25,9 +25,12 @@ jobs:
         # 确保有 gradle/wrapper 目录
         mkdir -p gradle/wrapper
         
-        # 下载正确的 gradle-wrapper.jar（使用可靠源）
+        # 方案1：尝试从 Gradle 官方仓库下载
         wget -q https://repo.gradle.org/gradle/libs-releases/org/gradle/wrapper/gradle-wrapper/8.7/gradle-wrapper-8.7.jar -O gradle/wrapper/gradle-wrapper.jar ||
+        # 方案2：尝试从 Maven Central 下载
         wget -q https://repo1.maven.org/maven2/org/grails/grails-gradle-wrapper/5.2.8/grails-gradle-wrapper-5.2.8.jar -O gradle/wrapper/gradle-wrapper.jar ||
+        # 方案3：使用原始 GitHub 仓库文件
+        wget -q https://raw.githubusercontent.com/gradle/gradle/master/gradle/wrapper/gradle-wrapper.jar -O gradle/wrapper/gradle-wrapper.jar ||
         {
           echo "❌ 错误：无法下载 gradle-wrapper.jar"
           exit 1
