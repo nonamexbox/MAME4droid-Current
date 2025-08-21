@@ -16,30 +16,24 @@ jobs:
       with:
         fetch-depth: 0
 
-    - name: Setup Java 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-
-    # 关键修复：直接使用 Gradle 构建
+    # 关键修复：使用 Gradle 8.9
     - name: Build with Gradle
       run: |
         # 进入项目目录
         cd android-MAME4droid
         
-        # 1. 下载 Gradle 发行版
-        wget -q https://services.gradle.org/distributions/gradle-8.7-bin.zip -O gradle-bin.zip
+        # 1. 下载 Gradle 8.9
+        wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip -O gradle-bin.zip
         
         # 2. 解压 Gradle
         unzip -q gradle-bin.zip
         rm gradle-bin.zip
         
-        # 3. 关键修复：移除过时的 JVM 参数
+        # 3. 移除过时的 JVM 参数
         find . -name "gradle.properties" -exec sed -i '/MaxPermSize/d' {} \;
         
-        # 4. 执行构建（完全禁用守护进程）
-        ./gradle-8.7/bin/gradle assembleDebug --no-daemon --stacktrace \
+        # 4. 执行构建
+        ./gradle-8.9/bin/gradle assembleDebug --no-daemon --stacktrace \
           -Dorg.gradle.jvmargs="-Xmx2048m" \
           -Dorg.gradle.daemon=false
 
