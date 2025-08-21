@@ -57,25 +57,28 @@ jobs:
         mv mame-mame0279 mame-src
         echo "✅ MAME 0.279源码下载完成"
 
-    # 关键修复：使用正确的构建命令
+    # 关键修复：使用正确的构建目标名称
     - name: Build MAME core library
       run: |
         cd mame-src
         
-        # 关键修复：使用正确的命令格式
-        make REGENIE=1 TARGETOS=android OSD=android ARCHITECTURE=arm64 \
+        # 1. 生成项目文件
+        make REGENIE=1 TARGETOS=android OSD=android
+        
+        # 2. 编译核心库
+        make TARGETOS=android TARGET=arcade SUBTARGET=mame OSD=android ARCHITECTURE=arm64 \
           CROSS_BUILD=1 \
           NOWERROR=1 \
           TOOLS=1 \
           -j4
         
-        # 验证生成的库文件
+        # 3. 验证生成的库文件
         if [ ! -f "mamearcadearm64.so" ]; then
           echo "❌ 错误：MAME核心库未生成"
           exit 1
         fi
         
-        # 复制到Android项目
+        # 4. 复制到Android项目
         mkdir -p ../android-MAME4droid/app/src/main/jniLibs/arm64-v8a
         cp mamearcadearm64.so ../android-MAME4droid/app/src/main/jniLibs/arm64-v8a/libMAME4droid.so
         echo "✅ MAME核心库生成成功（大小: $(du -h mamearcadearm64.so | cut -f1)）"
@@ -85,15 +88,15 @@ jobs:
       run: |
         cd android-MAME4droid
         
-        # 使用Gradle 8.9
+        # 1. 使用Gradle 8.9
         wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip -O gradle-bin.zip
         unzip -q gradle-bin.zip
         rm gradle-bin.zip
         
-        # 执行构建
+        # 2. 执行构建
         ./gradle-8.9/bin/gradle assembleDebug --no-daemon --stacktrace
         
-        # 验证APK大小
+        # 3. 验证APK大小
         APK_SIZE=$(du -h app/build/outputs/apk/debug/*.apk | cut -f1)
         echo "APK大小: $APK_SIZE"
         if [[ ! $APK_SIZE =~ M ]]; then
