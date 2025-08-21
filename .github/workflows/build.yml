@@ -14,7 +14,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0  # 确保检出所有文件
+        fetch-depth: 0
 
     - name: Setup Java 17
       uses: actions/setup-java@v4
@@ -22,46 +22,51 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # 修复点1：使用正确的参数设置 Android SDK
+    # 修复点：使用正确的 Android SDK 设置方式
     - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
+      uses: actions/setup-android@v3
       with:
-        # 使用正确的参数名
-        cmdline-tools-version: 'latest'
-        accept-android-sdk-licenses: true
-        packages: |
-          platform-tools
-          build-tools;34.0.0
-          platforms;android-34
-          ndk;27.2.12479018  # 指定需要的 NDK 版本
+        # 使用标准设置方式
+        android-sdk-file: ${{ github.workspace }}/commandlinetools-linux.zip
+        accept-licenses: yes
 
-    # 修复点2：简化文件验证步骤
+    # 修复点：手动安装所需的 SDK 组件
+    - name: Install required Android packages
+      run: |
+        # 设置环境变量
+        export ANDROID_SDK_ROOT="$HOME/android-sdk"
+        export PATH="$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin"
+        
+        # 接受所有许可证
+        yes | sdkmanager --licenses
+        
+        # 安装所需组件（使用最新可用版本）
+        sdkmanager "platform-tools"
+        sdkmanager "build-tools;34.0.0" || sdkmanager "build-tools;34.0.0-rc1" || sdkmanager "build-tools;34.0.0-beta1"
+        sdkmanager "platforms;android-34"
+        sdkmanager "ndk;27.2.12479018" || sdkmanager "ndk;27.2.12479018-beta1"
+        
+        # 验证安装
+        sdkmanager --list_installed
+
     - name: Verify repository content
       run: |
         echo "当前工作目录: $(pwd)"
-        echo "文件列表:"
         ls -la
-        
-        # 检查关键文件是否存在
         if [ ! -f "build.gradle" ]; then
           echo "错误: build.gradle 文件不存在!"
           exit 1
         fi
-        
         if [ ! -d "app" ]; then
           echo "错误: app 目录不存在!"
           exit 1
         fi
 
-    # 修复点3：移除不必要的权限设置
     - name: Build with Gradle
       run: |
-        # 设置环境变量
         export ANDROID_SDK_ROOT="$HOME/android-sdk"
         export ANDROID_NDK_HOME="$ANDROID_SDK_ROOT/ndk/27.2.12479018"
         export PATH="$PATH:$ANDROID_NDK_HOME"
-        
-        # 执行构建
         ./gradlew assembleDebug --no-daemon --stacktrace
 
     - name: Upload APK
