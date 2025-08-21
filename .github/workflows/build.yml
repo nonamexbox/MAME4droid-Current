@@ -15,7 +15,6 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        path: android-MAME4droid  # 确保检出到正确的目录
 
     - name: Setup Java 17
       uses: actions/setup-java@v4
@@ -23,50 +22,35 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # 修复点：完全手动设置 Android SDK
+    # 修复点：手动设置 Android SDK
     - name: Setup Android SDK
       run: |
-        # 创建 Android SDK 目录
         ANDROID_SDK_ROOT="$HOME/android-sdk"
         mkdir -p "$ANDROID_SDK_ROOT"
         
-        # 下载命令行工具
         wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
         mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
         unzip -q cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
         mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
         rm cmdline-tools.zip
         
-        # 设置环境变量
         echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-        echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.2.12479018" >> $GITHUB_ENV
         echo "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH" >> $GITHUB_PATH
         
-        # 验证 sdkmanager 是否可用
-        which sdkmanager || echo "sdkmanager not found"
-        sdkmanager --version || echo "sdkmanager version check failed"
-
-    # 修复点：安装必要的 Android 组件
-    - name: Install Android components
-      run: |
-        # 接受所有许可证
         yes | sdkmanager --licenses
-        
-        # 安装平台工具
         sdkmanager "platform-tools"
-        
-        # 安装构建工具
         sdkmanager "build-tools;34.0.0"
-        
-        # 安装平台
         sdkmanager "platforms;android-34"
-        
-        # 安装 NDK
         sdkmanager "ndk;27.2.12479018"
-        
-        # 验证安装
-        sdkmanager --list_installed
 
+    # 修复点：切换到项目目录
+    - name: Change to project directory
+      run: |
+        cd android-MAME4droid
+        echo "当前工作目录: $(pwd)"
+        ls -la
+
+    # 修复点：在项目目录验证文件
     - name: Verify repository content
       run: |
         echo "当前工作目录: $(pwd)"
@@ -84,6 +68,7 @@ jobs:
           exit 1
         fi
 
+    # 修复点：在项目目录执行构建
     - name: Build with Gradle
       run: |
         echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
