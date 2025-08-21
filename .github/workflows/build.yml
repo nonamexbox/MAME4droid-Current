@@ -14,8 +14,7 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        # 确保检出所有文件，包括隐藏文件
-        fetch-depth: 0
+        fetch-depth: 0  # 确保检出所有文件
 
     - name: Setup Java 17
       uses: actions/setup-java@v4
@@ -23,46 +22,38 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
+    # 修复点1：使用正确的参数设置 Android SDK
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
       with:
-        ndk-version: '27.2.12479018'
+        # 使用正确的参数名
+        cmdline-tools-version: 'latest'
+        accept-android-sdk-licenses: true
+        packages: |
+          platform-tools
+          build-tools;34.0.0
+          platforms;android-34
+          ndk;27.2.12479018  # 指定需要的 NDK 版本
 
-    - name: Verify file existence
+    # 修复点2：简化文件验证步骤
+    - name: Verify repository content
       run: |
-        # 列出所有文件，确认 build.sh 存在
         echo "当前工作目录: $(pwd)"
         echo "文件列表:"
         ls -la
         
-        # 确认 build.sh 存在
-        if [ ! -f "build.sh" ]; then
-          echo "错误: build.sh 文件不存在!"
+        # 检查关键文件是否存在
+        if [ ! -f "build.gradle" ]; then
+          echo "错误: build.gradle 文件不存在!"
           exit 1
         fi
         
-        # 检查文件内容
-        echo "build.sh 内容:"
-        cat build.sh
-
-    - name: Grant execute permission to build scripts
-      run: |
-        # 授予执行权限
-        chmod +x ./build.sh
-        
-        # 检查 jni 目录是否存在
-        if [ -d "app/src/main/jni" ]; then
-          echo "找到 jni 目录"
-          if [ -f "app/src/main/jni/build.sh" ]; then
-            chmod +x app/src/main/jni/build.sh
-            echo "已授予 app/src/main/jni/build.sh 执行权限"
-          else
-            echo "警告: app/src/main/jni/build.sh 不存在"
-          fi
-        else
-          echo "警告: app/src/main/jni 目录不存在"
+        if [ ! -d "app" ]; then
+          echo "错误: app 目录不存在!"
+          exit 1
         fi
 
+    # 修复点3：移除不必要的权限设置
     - name: Build with Gradle
       run: |
         # 设置环境变量
