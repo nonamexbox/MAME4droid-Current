@@ -16,18 +16,14 @@ jobs:
       with:
         fetch-depth: 0
 
-    # 关键修复：使用官方 Gradle Wrapper 生成脚本
+    # 关键修复：使用官方 Gradle Wrapper
     - name: Setup Gradle Wrapper
       run: |
-        # 进入项目目录
         cd android-MAME4droid
-        
-        # 确保有 gradle/wrapper 目录
-        mkdir -p gradle/wrapper
         
         # 下载官方 Gradle Wrapper 文件
         wget -q https://raw.githubusercontent.com/gradle/gradle/master/gradlew -O gradlew
-        wget -q https://raw.githubusercontent.com/gradle/gradle/master/gradle/wrapper/gradle-wrapper.jar -O gradle/wrapper/gradle-wrapper.jar
+        wget -q https://repo.maven.apache.org/maven2/org/grails/grails-gradle-wrapper/5.2.8/grails-gradle-wrapper-5.2.8.jar -O gradle/wrapper/gradle-wrapper.jar
         wget -q https://raw.githubusercontent.com/gradle/gradle/master/gradle/wrapper/gradle-wrapper.properties -O gradle/wrapper/gradle-wrapper.properties
         
         # 设置执行权限
@@ -50,40 +46,45 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
+    # 完全重写的 Android SDK 安装步骤（关键修复）
     - name: Setup Android SDK
       run: |
-        # 设置 Android SDK 根目录
+        # 1. 创建标准目录结构
         ANDROID_SDK_ROOT="$HOME/android-sdk"
-        mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+        mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
         
-        # 下载命令行工具
+        # 2. 下载命令行工具
         wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
         
-        # 解压到正确位置
-        unzip -q cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+        # 3. 解压到临时目录
+        unzip -q cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
         rm cmdline-tools.zip
         
-        # 设置环境变量
+        # 4. 关键修复：重命名解压后的目录
+        mv "$ANDROID_SDK_ROOT/cmdline-tools/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+        
+        # 5. 设置环境变量
         export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
         
-        # 验证安装
-        which sdkmanager || { 
+        # 6. 验证安装
+        echo "验证 sdkmanager 路径:"
+        which sdkmanager || {
           echo "❌ sdkmanager 未找到！"
           echo "目录内容:"
-          ls -la "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin"
+          ls -la "$ANDROID_SDK_ROOT/cmdline-tools/latest"
           exit 1
         }
         
-        # 接受许可证
+        # 7. 接受许可证
         yes | sdkmanager --licenses >/dev/null 2>&1
         
-        # 安装必要组件
+        # 8. 安装必要组件
         sdkmanager "platform-tools"
         sdkmanager "build-tools;34.0.0"
         sdkmanager "platforms;android-34"
         sdkmanager "ndk;27.2.12479018"
         
-        # 持久化环境变量
+        # 9. 持久化环境变量
         echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
         echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.2.12479018" >> $GITHUB_ENV
 
