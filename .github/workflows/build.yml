@@ -16,22 +16,22 @@ jobs:
       with:
         fetch-depth: 0
 
-    # 关键修复：完全重写 Gradle Wrapper 设置步骤
+    # 关键修复：使用本地 Gradle Wrapper
     - name: Setup Gradle Wrapper
       run: |
-        # 进入项目目录
         cd android-MAME4droid
         
-        # 1. 确保目录存在（关键修复）
+        # 1. 确保目录存在
         mkdir -p gradle/wrapper
         
-        # 2. 下载官方 Gradle Wrapper 文件
-        wget -q https://raw.githubusercontent.com/gradle/gradle/master/gradlew -O gradlew
-        wget -q https://repo.maven.apache.org/maven2/org/grails/grails-gradle-wrapper/5.2.8/grails-gradle-wrapper-5.2.8.jar -O gradle/wrapper/gradle-wrapper.jar
-        wget -q https://raw.githubusercontent.com/gradle/gradle/master/gradle/wrapper/gradle-wrapper.properties -O gradle/wrapper/gradle-wrapper.properties
+        # 2. 使用本地 Gradle 生成 Wrapper
+        # 安装 Gradle
+        wget -q https://services.gradle.org/distributions/gradle-8.7-bin.zip
+        unzip -q gradle-8.7-bin.zip
+        export PATH="$PWD/gradle-8.7/bin:$PATH"
         
-        # 3. 设置执行权限
-        chmod +x gradlew
+        # 3. 生成 Gradle Wrapper
+        gradle wrapper --gradle-version 8.7
         
         # 4. 验证文件
         if [ ! -f "gradlew" ]; then
