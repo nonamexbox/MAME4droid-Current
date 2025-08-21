@@ -40,6 +40,7 @@ jobs:
         export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
         
         # 5. 验证安装（必须步骤）
+        echo "验证sdkmanager路径:"
         which sdkmanager || { 
           echo "❌ sdkmanager 未找到！"
           echo "目录内容:"
