@@ -1,14 +1,17 @@
 name: Android Build
 
-on: [push, workflow_dispatch]
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
-  build:
+  build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 60
 
     steps:
-    - name: Checkout
+    - name: Checkout repository
       uses: actions/checkout@v4
 
     - name: Setup Java 17
@@ -17,18 +20,27 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    - name: Setup Android NDK
+    - name: Setup Android SDK
       uses: android-actions/setup-android@v3
       with:
-        ndk-version: '27.2.12479018'  # 精确匹配 gradle 配置
+        ndk-version: '27.2.12479018'
 
-    - name: Build APK
+    - name: Grant execute permission to build scripts
       run: |
+        chmod +x build.sh
+        chmod +x app/src/main/jni/build.sh || true
+
+    - name: Build with Gradle
+      run: |
+        export ANDROID_SDK_ROOT="$HOME/android-sdk"
+        export ANDROID_NDK_HOME="$ANDROID_SDK_ROOT/ndk/27.2.12479018"
+        export PATH="$PATH:$ANDROID_NDK_HOME"
         ./gradlew assembleDebug --no-daemon --stacktrace
 
+    # 修复点：使用 upload-artifact v4 而不是已弃用的 v3
     - name: Upload APK
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
-        name: MAME4droid-Debug
+        name: MAME4droid-APK
         path: app/build/outputs/apk/debug/*.apk
         retention-days: 1
