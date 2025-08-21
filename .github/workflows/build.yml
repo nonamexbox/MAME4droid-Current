@@ -22,7 +22,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # 关键修复：直接使用本地 Gradle 构建
+    # 关键修复：直接使用 Gradle 构建
     - name: Build with Gradle
       run: |
         # 进入项目目录
@@ -35,11 +35,13 @@ jobs:
         unzip -q gradle-bin.zip
         rm gradle-bin.zip
         
-        # 3. 设置环境变量
-        export PATH="$PWD/gradle-8.7/bin:$PATH"
+        # 3. 关键修复：移除过时的 JVM 参数
+        find . -name "gradle.properties" -exec sed -i '/MaxPermSize/d' {} \;
         
-        # 4. 执行构建
-        ./gradle-8.7/bin/gradle assembleDebug --no-daemon --stacktrace
+        # 4. 执行构建（完全禁用守护进程）
+        ./gradle-8.7/bin/gradle assembleDebug --no-daemon --stacktrace \
+          -Dorg.gradle.jvmargs="-Xmx2048m" \
+          -Dorg.gradle.daemon=false
 
     # 上传APK
     - name: Upload APK
