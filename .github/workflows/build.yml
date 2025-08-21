@@ -13,8 +13,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
     - name: Setup Java 17
       uses: actions/setup-java@v4
@@ -25,76 +23,39 @@ jobs:
     # 完全重写的 Android SDK 安装步骤（关键修复）
     - name: Setup Android SDK
       run: |
-        # 1. 设置Android SDK根目录
+        # 1. 创建标准目录结构
         ANDROID_SDK_ROOT="$HOME/android-sdk"
-        mkdir -p "$ANDROID_SDK_ROOT"
-        
-        # 2. 下载命令行工具（使用最新版本）
-        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
-        
-        # 3. 创建正确的目录结构（必须为cmdline-tools/latest）
         mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+        
+        # 2. 下载命令行工具
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip -O cmdline-tools.zip
         unzip -q cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools/latest"
         rm cmdline-tools.zip
         
-        # 4. 设置环境变量（当前步骤立即生效）
+        # 3. 设置即时生效的环境变量
         export ANDROID_SDK_ROOT
         export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
         
-        # 5. 验证命令可用性
+        # 4. 验证安装
         which sdkmanager || { echo "❌ sdkmanager 未找到!"; exit 1; }
-        sdkmanager --version || { echo "❌ sdkmanager 版本检查失败!"; exit 1; }
-        echo "✅ sdkmanager 版本: $(sdkmanager --version)"
+        echo "✅ sdkmanager 路径: $(which sdkmanager)"
         
-        # 6. 接受许可证（使用echo避免管道中断）
-        echo -e "y\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny\ny" | sdkmanager --licenses
+        # 5. 接受许可证
+        echo -e "y\ny\ny\ny\ny\ny\ny\ny\ny\ny" | sdkmanager --licenses
         
-        # 7. 安装必要组件
-        sdkmanager "platform-tools"
-        sdkmanager "build-tools;34.0.0"
-        sdkmanager "platforms;android-34"
-        sdkmanager "ndk;27.2.12479018"
+        # 6. 安装必要组件
+        sdkmanager "platform-tools" "build-tools;34.0.0" "platforms;android-34" "ndk;27.2.12479018"
         
-        # 8. 持久化环境变量
+        # 7. 持久化环境变量
         echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
         echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.2.12479018" >> $GITHUB_ENV
-        echo "PATH=$PATH" >> $GITHUB_PATH
 
-    # 切换到项目目录
     - name: Change to project directory
-      run: |
-        cd android-MAME4droid
-        echo "✅ 切换到项目目录: $(pwd)"
-        echo "PROJECT_DIR=$(pwd)" >> $GITHUB_ENV
+      run: cd android-MAME4droid
 
-    # 文件验证
-    - name: Verify repository content
-      run: |
-        echo "当前工作目录: $(pwd)"
-        ls -la
-        if [ ! -f "build.gradle" ]; then
-          echo "❌ 错误: build.gradle 文件不存在!"
-          exit 1
-        fi
-        if [ ! -d "app" ]; then
-          echo "❌ 错误: app 目录不存在!"
-          exit 1
-        fi
-        if [ ! -f "app/build.gradle" ]; then
-          echo "❌ 错误: app/build.gradle 文件不存在!"
-          exit 1
-        fi
-        echo "✅ 所有必需文件存在"
-
-    # 构建APK
     - name: Build with Gradle
-      run: |
-        echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
-        echo "ANDROID_NDK_HOME: $ANDROID_NDK_HOME"
-        echo "PATH: $PATH"
-        ./gradlew assembleDebug --no-daemon --stacktrace
+      run: ./gradlew assembleDebug --no-daemon --stacktrace
 
-    # 上传APK
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
