@@ -16,14 +16,22 @@ jobs:
       with:
         fetch-depth: 0
 
-    # 关键修复：添加 Gradle Wrapper 修复步骤
+    # 关键修复：修复 Gradle Wrapper
     - name: Fix Gradle Wrapper
       run: |
+        # 进入项目目录
+        cd android-MAME4droid
+        
         # 确保有 gradle/wrapper 目录
         mkdir -p gradle/wrapper
         
-        # 下载正确的 gradle-wrapper.jar
-        wget -q https://repo.maven.apache.org/maven2/org/grails/grails-gradle-wrapper/5.2.8/grails-gradle-wrapper-5.2.8.jar -O gradle/wrapper/gradle-wrapper.jar
+        # 下载正确的 gradle-wrapper.jar（使用可靠源）
+        wget -q https://repo.gradle.org/gradle/libs-releases/org/gradle/wrapper/gradle-wrapper/8.7/gradle-wrapper-8.7.jar -O gradle/wrapper/gradle-wrapper.jar ||
+        wget -q https://repo1.maven.org/maven2/org/grails/grails-gradle-wrapper/5.2.8/grails-gradle-wrapper-5.2.8.jar -O gradle/wrapper/gradle-wrapper.jar ||
+        {
+          echo "❌ 错误：无法下载 gradle-wrapper.jar"
+          exit 1
+        }
         
         # 生成 gradlew 脚本
         echo '#!/bin/sh' > gradlew
@@ -32,6 +40,17 @@ jobs:
         
         # 生成 gradle-wrapper.properties
         echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-bin.zip" > gradle/wrapper/gradle-wrapper.properties
+        
+        # 验证文件
+        if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+          echo "❌ 错误：gradle-wrapper.jar 未创建"
+          exit 1
+        fi
+        if [ ! -f "gradlew" ]; then
+          echo "❌ 错误：gradlew 未创建"
+          exit 1
+        fi
+        echo "✅ Gradle Wrapper 修复成功"
 
     - name: Setup Java 17
       uses: actions/setup-java@v4
@@ -41,29 +60,64 @@ jobs:
 
     - name: Setup Android SDK
       run: |
-        # ...保持之前的Android SDK安装步骤不变...
+        # 设置 Android SDK 根目录
+        ANDROID_SDK_ROOT="$HOME/android-sdk"
+        mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+        
+        # 下载命令行工具
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
+        
+        # 解压到正确位置
+        unzip -q cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+        rm cmdline-tools.zip
+        
+        # 设置环境变量
+        export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
+        
+        # 验证安装
+        which sdkmanager || { 
+          echo "❌ sdkmanager 未找到！"
+          echo "目录内容:"
+          ls -la "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin"
+          exit 1
+        }
+        
+        # 接受许可证
+        yes | sdkmanager --licenses >/dev/null 2>&1
+        
+        # 安装必要组件
+        sdkmanager "platform-tools"
+        sdkmanager "build-tools;34.0.0"
+        sdkmanager "platforms;android-34"
+        sdkmanager "ndk;27.2.12479018"
+        
+        # 持久化环境变量
+        echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+        echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.2.12479018" >> $GITHUB_ENV
 
+    # 切换到项目目录
     - name: Change to project directory
       run: |
         cd android-MAME4droid
         echo "PROJECT_DIR=$(pwd)" >> $GITHUB_ENV
 
-    # 验证 Gradle Wrapper 文件
-    - name: Verify Gradle Wrapper
+    # 验证文件
+    - name: Verify repository content
       working-directory: ${{ env.PROJECT_DIR }}
       run: |
-        echo "验证Gradle Wrapper文件:"
-        ls -la gradle/wrapper
-        if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
-          echo "❌ 错误: gradle-wrapper.jar 文件不存在!"
-          exit 1
-        fi
+        echo "当前工作目录: $(pwd)"
+        ls -la
         if [ ! -f "gradlew" ]; then
           echo "❌ 错误: gradlew 文件不存在!"
           exit 1
         fi
-        echo "✅ Gradle Wrapper 文件完整"
+        if [ ! -f "build.gradle" ]; then
+          echo "❌ 错误: build.gradle 文件不存在!"
+          exit 1
+        fi
+        echo "✅ 所有必需文件存在"
 
+    # 构建APK
     - name: Build with Gradle
       working-directory: ${{ env.PROJECT_DIR }}
       run: |
@@ -77,8 +131,10 @@ jobs:
         # 执行构建
         ./gradlew assembleDebug --no-daemon --stacktrace
 
+    # 上传APK
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: MAME4droid-APK
         path: android-MAME4droid/app/build/outputs/apk/debug/*.apk
+        retention-days: 1
