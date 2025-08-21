@@ -16,29 +16,26 @@ jobs:
       with:
         fetch-depth: 0
 
-    # 关键修复：使用本地 Gradle 生成 Wrapper
+    # 关键修复：完全绕过 Gradle Wrapper 生成
     - name: Setup Gradle Wrapper
       run: |
-        # 进入项目目录
         cd android-MAME4droid
         
-        # 1. 下载 Gradle 发行版（使用官方源）
-        wget -q https://services.gradle.org/distributions/gradle-8.7-bin.zip -O gradle-bin.zip
+        # 1. 确保目录存在
+        mkdir -p gradle/wrapper
         
-        # 2. 解压 Gradle
-        unzip -q gradle-bin.zip
-        rm gradle-bin.zip
+        # 2. 直接下载官方 Gradle Wrapper 文件
+        wget -q https://raw.githubusercontent.com/gradle/gradle/master/gradlew -O gradlew
+        wget -q https://repo.maven.apache.org/maven2/org/grails/grails-gradle-wrapper/5.2.8/grails-gradle-wrapper-5.2.8.jar -O gradle/wrapper/gradle-wrapper.jar
+        wget -q https://raw.githubusercontent.com/gradle/gradle/master/gradle/wrapper/gradle-wrapper.properties -O gradle/wrapper/gradle-wrapper.properties
         
-        # 3. 设置环境变量
-        export PATH="$PWD/gradle-8.7/bin:$PATH"
+        # 3. 设置执行权限
+        chmod +x gradlew
         
-        # 4. 生成 Gradle Wrapper（关键修复）
-        ./gradle-8.7/bin/gradle wrapper --gradle-version 8.7 --no-daemon
-        
-        # 5. 修改 gradle.properties 文件
+        # 4. 关键修复：覆盖默认的 gradle.properties
         echo "org.gradle.jvmargs=-Xmx2048m" > gradle.properties
         
-        # 6. 验证文件
+        # 5. 验证文件
         if [ ! -f "gradlew" ]; then
           echo "❌ 错误：gradlew 文件未创建"
           exit 1
@@ -132,8 +129,14 @@ jobs:
         # 确保gradlew有执行权限
         chmod +x gradlew
         
-        # 执行构建（添加 --no-daemon 参数）
-        ./gradlew assembleDebug --no-daemon --stacktrace
+        # 关键修复：使用本地 Gradle 执行构建
+        # 下载 Gradle 发行版
+        wget -q https://services.gradle.org/distributions/gradle-8.7-bin.zip -O gradle-bin.zip
+        unzip -q gradle-bin.zip
+        rm gradle-bin.zip
+        
+        # 执行构建（使用本地 Gradle）
+        ./gradle-8.7/bin/gradle assembleDebug --no-daemon --stacktrace
 
     # 上传APK
     - name: Upload APK
