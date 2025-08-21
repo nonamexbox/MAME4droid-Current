@@ -13,6 +13,25 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    # 关键修复：添加 Gradle Wrapper 修复步骤
+    - name: Fix Gradle Wrapper
+      run: |
+        # 确保有 gradle/wrapper 目录
+        mkdir -p gradle/wrapper
+        
+        # 下载正确的 gradle-wrapper.jar
+        wget -q https://repo.maven.apache.org/maven2/org/grails/grails-gradle-wrapper/5.2.8/grails-gradle-wrapper-5.2.8.jar -O gradle/wrapper/gradle-wrapper.jar
+        
+        # 生成 gradlew 脚本
+        echo '#!/bin/sh' > gradlew
+        echo 'exec java -Dorg.gradle.appname=gradlew -classpath "gradle/wrapper/gradle-wrapper.jar" org.gradle.wrapper.GradleWrapperMain "$@"' >> gradlew
+        chmod +x gradlew
+        
+        # 生成 gradle-wrapper.properties
+        echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.7-bin.zip" > gradle/wrapper/gradle-wrapper.properties
 
     - name: Setup Java 17
       uses: actions/setup-java@v4
@@ -24,35 +43,38 @@ jobs:
       run: |
         # ...保持之前的Android SDK安装步骤不变...
 
-    # 切换到项目目录并设置环境变量
     - name: Change to project directory
       run: |
         cd android-MAME4droid
-        echo "✅ 切换到项目目录: $(pwd)"
         echo "PROJECT_DIR=$(pwd)" >> $GITHUB_ENV
 
-    # 使用 working-directory 参数验证文件
-    - name: Verify repository content
+    # 验证 Gradle Wrapper 文件
+    - name: Verify Gradle Wrapper
       working-directory: ${{ env.PROJECT_DIR }}
       run: |
-        echo "当前工作目录: $(pwd)"
-        ls -la
+        echo "验证Gradle Wrapper文件:"
+        ls -la gradle/wrapper
+        if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+          echo "❌ 错误: gradle-wrapper.jar 文件不存在!"
+          exit 1
+        fi
         if [ ! -f "gradlew" ]; then
           echo "❌ 错误: gradlew 文件不存在!"
           exit 1
         fi
-        if [ ! -f "build.gradle" ]; then
-          echo "❌ 错误: build.gradle 文件不存在!"
-          exit 1
-        fi
-        echo "✅ 所有必需文件存在"
+        echo "✅ Gradle Wrapper 文件完整"
 
-    # 使用 working-directory 参数执行构建
     - name: Build with Gradle
       working-directory: ${{ env.PROJECT_DIR }}
       run: |
         echo "当前工作目录: $(pwd)"
+        echo "文件列表:"
+        ls -la
+        
+        # 确保gradlew有执行权限
         chmod +x gradlew
+        
+        # 执行构建
         ./gradlew assembleDebug --no-daemon --stacktrace
 
     - name: Upload APK
