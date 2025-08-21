@@ -16,26 +16,32 @@ jobs:
       with:
         fetch-depth: 0
 
-    # 关键修复：使用官方 Gradle Wrapper
+    # 关键修复：完全重写 Gradle Wrapper 设置步骤
     - name: Setup Gradle Wrapper
       run: |
+        # 进入项目目录
         cd android-MAME4droid
         
-        # 下载官方 Gradle Wrapper 文件
+        # 1. 确保目录存在（关键修复）
+        mkdir -p gradle/wrapper
+        
+        # 2. 下载官方 Gradle Wrapper 文件
         wget -q https://raw.githubusercontent.com/gradle/gradle/master/gradlew -O gradlew
         wget -q https://repo.maven.apache.org/maven2/org/grails/grails-gradle-wrapper/5.2.8/grails-gradle-wrapper-5.2.8.jar -O gradle/wrapper/gradle-wrapper.jar
         wget -q https://raw.githubusercontent.com/gradle/gradle/master/gradle/wrapper/gradle-wrapper.properties -O gradle/wrapper/gradle-wrapper.properties
         
-        # 设置执行权限
+        # 3. 设置执行权限
         chmod +x gradlew
         
-        # 验证文件
+        # 4. 验证文件
         if [ ! -f "gradlew" ]; then
           echo "❌ 错误：gradlew 文件未创建"
           exit 1
         fi
         if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
           echo "❌ 错误：gradle-wrapper.jar 文件未创建"
+          echo "目录内容:"
+          ls -la gradle/wrapper
           exit 1
         fi
         echo "✅ Gradle Wrapper 设置成功"
@@ -46,7 +52,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # 完全重写的 Android SDK 安装步骤（关键修复）
+    # 完全重写的 Android SDK 安装步骤
     - name: Setup Android SDK
       run: |
         # 1. 创建标准目录结构
