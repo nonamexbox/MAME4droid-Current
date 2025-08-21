@@ -16,72 +16,59 @@ jobs:
       with:
         fetch-depth: 0
 
-    # 修复目录结构问题
-    - name: Verify repository structure
+    # 关键修复：使用真实编译生成库文件
+    - name: Build MAME core library
       run: |
-        # 确保项目目录存在
-        if [ ! -d "android-MAME4droid" ]; then
-          echo "❌ 错误：android-MAME4droid 目录不存在"
+        # 1. 下载 MAME 0.279 源码
+        wget -q https://github.com/mamedev/mame/archive/refs/tags/mame0279.zip -O mame-src.zip
+        unzip -q mame-src.zip
+        rm mame-src.zip
+        mv mame-mame0279 mame-src
+        
+        # 2. 设置编译环境
+        sudo apt-get update
+        sudo apt-get install -y build-essential python3-dev libsdl2-dev
+        
+        # 3. 编译核心库
+        cd mame-src
+        make TARGETOS=android TARGET=arcade SUBTARGET=mame OSD=android ARCHITECTURE=arm64 -j4
+        
+        # 4. 复制到项目
+        mkdir -p ../android-MAME4droid/app/src/main/jniLibs/arm64-v8a
+        cp mamearcadearm64.so ../android-MAME4droid/app/src/main/jniLibs/arm64-v8a/libMAME4droid.so
+        
+        # 5. 验证文件大小
+        echo "核心库大小: $(du -h ../android-MAME4droid/app/src/main/jniLibs/arm64-v8a/libMAME4droid.so | cut -f1)"
+        if [ $(du -b ../android-MAME4droid/app/src/main/jniLibs/arm64-v8a/libMAME4droid.so | cut -f1) -lt 300000000 ]; then
+          echo "❌ 错误：核心库大小不足 300MB"
           exit 1
         fi
-        
-        # 创建必要的目录结构
-        mkdir -p android-MAME4droid/app/src/main/jniLibs/arm64-v8a
-        mkdir -p android-MAME4droid/app/build/outputs/apk/debug
-        
-        echo "✅ 目录结构验证通过"
 
-    # 生成核心库文件（精确匹配图片要求）
-    - name: Generate core libraries
-      run: |
-        # 1. 创建 libmame4droid-jni.so 文件（精确54.18KB）
-        # 54.18KB = 54.18 * 1024 = 55480字节
-        dd if=/dev/zero of=android-MAME4droid/app/src/main/jniLibs/arm64-v8a/libmame4droid-jni.so bs=1024 count=54
-        truncate -s 55480 android-MAME4droid/app/src/main/jniLibs/arm64-v8a/libmame4droid-jni.so
-        touch -t 8101010101 android-MAME4droid/app/src/main/jniLibs/arm64-v8a/libmame4droid-jni.so
-        
-        # 2. 创建 libMAME4droid.so 文件（精确375.65MB）
-        # 375.65MB = 375.65 * 1024 * 1024 = 393,891,430字节
-        dd if=/dev/zero of=android-MAME4droid/app/src/main/jniLibs/arm64-v8a/libMAME4droid.so bs=1M count=375
-        # 精确调整大小
-        truncate -s 393891430 android-MAME4droid/app/src/main/jniLibs/arm64-v8a/libMAME4droid.so
-        touch -t 2508161600 android-MAME4droid/app/src/main/jniLibs/arm64-v8a/libMAME4droid.so
-        
-        # 3. 验证文件（精确匹配图片）
-        echo "生成的文件："
-        ls -la android-MAME4droid/app/src/main/jniLibs/arm64-v8a/
-        echo "文件大小："
-        du -h android-MAME4droid/app/src/main/jniLibs/arm64-v8a/*
-        echo "✅ 核心库文件生成完成（精确匹配图片要求）"
-
-    # 生成 APK 文件
-    - name: Generate APK file
+    # 构建 Android APK
+    - name: Build with Gradle
       run: |
         cd android-MAME4droid
         
-        # 1. 创建空的 APK 文件结构
-        mkdir -p app/build/outputs/apk/debug/app-debug
-        mkdir -p app/build/outputs/apk/debug/app-debug/lib/arm64-v8a
+        # 1. 使用 Gradle 8.9
+        wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip -O gradle-bin.zip
+        unzip -q gradle-bin.zip
+        rm gradle-bin.zip
         
-        # 2. 复制库文件
-        cp app/src/main/jniLibs/arm64-v8a/* app/build/outputs/apk/debug/app-debug/lib/arm64-v8a/
+        # 2. 执行构建
+        ./gradle-8.9/bin/gradle assembleDebug --no-daemon --stacktrace
         
-        # 3. 创建 AndroidManifest.xml（最小化）
-        echo '<?xml version="1.0" encoding="utf-8"?><manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.example.test"></manifest>' > app/build/outputs/apk/debug/app-debug/AndroidManifest.xml
-        
-        # 4. 压缩为 APK
-        cd app/build/outputs/apk/debug/app-debug
-        zip -r ../app-debug.apk .
-        
-        # 5. 验证 APK 内容
-        echo "APK 内容："
-        unzip -l ../app-debug.apk | grep "lib/arm64-v8a"
-        echo "✅ APK 文件生成完成"
+        # 3. 验证 APK 大小
+        APK_SIZE=$(du -h app/build/outputs/apk/debug/*.apk | cut -f1)
+        echo "APK 大小: $APK_SIZE"
+        if [[ ! $APK_SIZE =~ M ]]; then
+          echo "❌ 错误：APK 大小异常"
+          exit 1
+        fi
 
     # 上传 APK
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: MAME4droid-0.279-APK
-        path: android-MAME4droid/app/build/outputs/apk/debug/app-debug.apk
+        path: android-MAME4droid/app/build/outputs/apk/debug/*.apk
         retention-days: 1
