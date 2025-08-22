@@ -24,7 +24,27 @@ jobs:
 
     - name: Setup Android SDK
       run: |
-        # ...保持之前的Android SDK安装步骤不变...
+        # 完整的Android SDK安装步骤
+        ANDROID_SDK_ROOT="$HOME/android-sdk"
+        mkdir -p "$ANDROID_SDK_ROOT"
+        
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
+        unzip -q cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
+        rm cmdline-tools.zip
+        
+        export PATH="$ANDROID_SDK_ROOT/cmdline-tools/bin:$PATH"
+        
+        # 接受许可证
+        yes | sdkmanager --licenses >/dev/null 2>&1
+        
+        # 安装必要组件
+        sdkmanager "platform-tools"
+        sdkmanager "build-tools;34.0.0"
+        sdkmanager "platforms;android-34"
+        sdkmanager "ndk;27.2.12479018"
+        
+        echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+        echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.2.12479018" >> $GITHUB_ENV
 
     - name: Download MAME 0.279 source
       run: |
@@ -34,7 +54,7 @@ jobs:
         mv mame-mame0279 mame-src
         echo "✅ MAME 0.279源码下载完成"
 
-    # 关键修复：使用正确的构建目标
+    # 关键修复：使用官方推荐的构建命令
     - name: Build MAME core library
       run: |
         cd mame-src
@@ -42,9 +62,10 @@ jobs:
         # 1. 生成项目文件
         make REGENIE=1 TARGETOS=android OSD=android
         
-        # 2. 关键修复：使用正确的编译目标
-        make TARGET=androidarm64 SUBTARGET=mame \
-          CROSS_BUILD=1 \
+        # 2. 关键修复：使用官方推荐的构建命令
+        make TARGETOS=android OSD=android ARCHITECTURE=arm64 \
+          TARGET=arcade \
+          SUBTARGET=mame \
           NOWERROR=1 \
           TOOLS=1 \
           -j4
@@ -60,20 +81,19 @@ jobs:
         cp mamearcadearm64.so ../android-MAME4droid/app/src/main/jniLibs/arm64-v8a/libMAME4droid.so
         echo "✅ MAME核心库生成成功（大小: $(du -h mamearcadearm64.so | cut -f1)）"
 
-    # 构建APK
     - name: Build with Gradle
       run: |
         cd android-MAME4droid
         
-        # 1. 使用Gradle 8.9
+        # 使用Gradle 8.9
         wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip -O gradle-bin.zip
         unzip -q gradle-bin.zip
         rm gradle-bin.zip
         
-        # 2. 执行构建
+        # 执行构建
         ./gradle-8.9/bin/gradle assembleDebug --no-daemon --stacktrace
         
-        # 3. 验证APK大小
+        # 验证APK大小
         APK_SIZE=$(du -h app/build/outputs/apk/debug/*.apk | cut -f1)
         echo "APK大小: $APK_SIZE"
         if [[ ! $APK_SIZE =~ M ]]; then
@@ -81,7 +101,6 @@ jobs:
           exit 1
         fi
 
-    # 上传APK
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
