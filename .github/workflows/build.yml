@@ -22,7 +22,7 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
-    # 关键修复：完整的 Android SDK 安装
+    # 关键修复：正确的 Android SDK 安装
     - name: Setup Android SDK
       run: |
         # 1. 创建 Android SDK 目录
@@ -32,17 +32,16 @@ jobs:
         # 2. 下载命令行工具
         wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
         
-        # 3. 关键修复：创建目标目录
+        # 3. 关键修复：解压到临时目录并移动文件
+        unzip -q cmdline-tools.zip -d temp-cmdline-tools
         mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+        mv temp-cmdline-tools/cmdline-tools/* "$ANDROID_SDK_ROOT/cmdline-tools/latest/"
+        rm -rf temp-cmdline-tools cmdline-tools.zip
         
-        # 4. 解压到目标目录
-        unzip -q cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools/latest"
-        rm cmdline-tools.zip
-        
-        # 5. 设置环境变量
+        # 4. 设置环境变量
         export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
         
-        # 6. 关键修复：验证 sdkmanager 路径
+        # 5. 关键修复：验证 sdkmanager 路径
         echo "验证 sdkmanager 路径:"
         which sdkmanager || {
           echo "❌ sdkmanager 未找到！"
@@ -51,7 +50,7 @@ jobs:
           exit 1
         }
         
-        # 7. 手动接受许可证
+        # 6. 手动接受许可证
         echo "手动接受 Android 许可证..."
         mkdir -p "$HOME/.android/licenses"
         echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > "$HOME/.android/licenses/android-sdk-license"
@@ -59,13 +58,13 @@ jobs:
         echo "24333f8a63b6825ea9c5514f83c2829b004d1fee" >> "$HOME/.android/licenses/android-sdk-license"
         echo "84831b9409646a918e30573bab4c9c91346d8abd" >> "$HOME/.android/licenses/android-sdk-license"
         
-        # 8. 关键修复：指定 SDK 根目录
+        # 7. 关键修复：指定 SDK 根目录
         sdkmanager --sdk_root="$ANDROID_SDK_ROOT" "platform-tools"
         sdkmanager --sdk_root="$ANDROID_SDK_ROOT" "build-tools;34.0.0"
         sdkmanager --sdk_root="$ANDROID_SDK_ROOT" "platforms;android-34"
         sdkmanager --sdk_root="$ANDROID_SDK_ROOT" "ndk;27.2.12479018"
         
-        # 9. 持久化环境变量
+        # 8. 持久化环境变量
         echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
         echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.2.12479018" >> $GITHUB_ENV
 
