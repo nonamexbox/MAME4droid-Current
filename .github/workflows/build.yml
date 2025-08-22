@@ -22,30 +22,110 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
 
+    # 关键修复：完整的Android SDK安装步骤
     - name: Setup Android SDK
       run: |
-        # 完整的Android SDK安装步骤
-        ...
+        # 1. 创建Android SDK目录
+        ANDROID_SDK_ROOT="$HOME/android-sdk"
+        mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+        
+        # 2. 下载命令行工具
+        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
+        
+        # 3. 解压到临时目录
+        unzip -q cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+        rm cmdline-tools.zip
+        
+        # 4. 关键修复：重命名解压后的目录
+        mv "$ANDROID_SDK_ROOT/cmdline-tools/latest/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+        
+        # 5. 设置环境变量
+        export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH"
+        
+        # 6. 验证安装
+        echo "验证 sdkmanager 路径:"
+        which sdkmanager || {
+          echo "❌ sdkmanager 未找到！"
+          echo "目录内容:"
+          ls -la "$ANDROID_SDK_ROOT/cmdline-tools/latest"
+          exit 1
+        }
+        
+        # 7. 接受许可证
+        yes | sdkmanager --licenses >/dev/null 2>&1
+        
+        # 8. 安装必要组件
+        sdkmanager "platform-tools"
+        sdkmanager "build-tools;34.0.0"
+        sdkmanager "platforms;android-34"
+        sdkmanager "ndk;27.2.12479018"
+        
+        # 9. 持久化环境变量
+        echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+        echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.2.12479018" >> $GITHUB_ENV
 
-    # 关键修复：MAME核心库编译
+    # 下载 MAME 0.279 源码
+    - name: Download MAME 0.279 source
+      run: |
+        wget -q https://github.com/mamedev/mame/archive/refs/tags/mame0279.zip -O mame-src.zip
+        unzip -q mame-src.zip
+        rm mame-src.zip
+        mv mame-mame0279 mame-src
+        echo "✅ MAME 0.279源码下载完成"
+
+    # 关键修复：使用正确的构建命令
     - name: Build MAME core library
       run: |
-        # 下载MAME源码
-        wget https://github.com/mamedev/mame/archive/refs/tags/mame0279.zip
+        cd mame-src
         
-        # 编译核心库
-        make TARGETOS=android OSD=android ARCHITECTURE=arm64 ...
+        # 1. 生成项目文件
+        make REGENIE=1 TARGETOS=android OSD=android
         
-        # 复制到项目
-        cp mamearcadearm64.so ../app/src/main/jniLibs/arm64-v8a/
+        # 2. 编译核心库
+        make TARGETOS=android OSD=android ARCHITECTURE=arm64 \
+          TARGET=arcade \
+          SUBTARGET=mame \
+          CROSS_BUILD=1 \
+          NOWERROR=1 \
+          TOOLS=1 \
+          -j4
+        
+        # 3. 验证生成的库文件
+        if [ ! -f "mamearcadearm64.so" ]; then
+          echo "❌ 错误：MAME核心库未生成"
+          exit 1
+        fi
+        
+        # 4. 复制到Android项目
+        mkdir -p ../android-MAME4droid/app/src/main/jniLibs/arm64-v8a
+        cp mamearcadearm64.so ../android-MAME4droid/app/src/main/jniLibs/arm64-v8a/libMAME4droid.so
+        echo "✅ MAME核心库生成成功（大小: $(du -h mamearcadearm64.so | cut -f1)）"
 
+    # 构建APK
     - name: Build with Gradle
       run: |
         cd android-MAME4droid
-        ./gradlew assembleDebug --no-daemon --stacktrace
+        
+        # 1. 使用Gradle 8.9
+        wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip -O gradle-bin.zip
+        unzip -q gradle-bin.zip
+        rm gradle-bin.zip
+        
+        # 2. 执行构建
+        ./gradle-8.9/bin/gradle assembleDebug --no-daemon --stacktrace
+        
+        # 3. 验证APK大小
+        APK_SIZE=$(du -h app/build/outputs/apk/debug/*.apk | cut -f1)
+        echo "APK大小: $APK_SIZE"
+        if [[ ! $APK_SIZE =~ M ]]; then
+          echo "❌ 错误：APK大小异常"
+          exit 1
+        fi
 
+    # 上传APK
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: MAME4droid-0.279-APK
         path: android-MAME4droid/app/build/outputs/apk/debug/*.apk
+        retention-days: 1
