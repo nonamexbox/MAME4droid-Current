@@ -43,9 +43,7 @@ jobs:
         make REGENIE=1 TARGETOS=android OSD=android
         
         # 2. 关键修复：使用正确的编译目标
-        make TARGETOS=android OSD=android ARCHITECTURE=arm64 \
-          TARGET=arcade \
-          SUBTARGET=mame \
+        make TARGET=androidarm64 SUBTARGET=mame \
           CROSS_BUILD=1 \
           NOWERROR=1 \
           TOOLS=1 \
