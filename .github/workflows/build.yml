@@ -25,8 +25,10 @@ jobs:
     - name: Set up build environment
       run: |
         sudo apt-get update
+        # 关键修复：安装Qt5依赖但禁用Qt编译
         sudo apt-get install -y build-essential unzip python3 libsdl2-dev lua5.4 \
-          libfontconfig-dev pkg-config
+          libfontconfig-dev pkg-config qtbase5-dev \
+          qtchooser qt5-qmake qtbase5-dev-tools
         
         # 增加交换空间到8GB
         sudo fallocate -l 8G /swapfile
@@ -59,17 +61,20 @@ jobs:
         sed -i '/"bimg"/d' mame-src/scripts/genie.lua
         sed -i '/USE_BGFX/d' mame-src/scripts/genie.lua
         
-        # 3. 确保滤镜功能开启
+        # 3. 强制禁用Qt编译
+        sed -i 's/USE_QT=1/USE_QT=0/' mame-src/scripts/genie.lua
+        sed -i 's/USE_QTDEBUG=1/USE_QTDEBUG=0/' mame-src/scripts/genie.lua
+        
+        # 4. 确保滤镜功能开启
         echo 'defines { "USE_OPENGL=1" }' >> mame-src/scripts/genie.lua
         
-        # 4. 添加Android专用定义
+        # 5. 添加Android专用定义
         cat >> mame-src/scripts/genie.lua << 'EOF'
         defines {
             "SDLMAME_ANDROID=1",
             "__LIBRETRO__",
             "LUA_COMPAT_ALL",
-            "NO_USE_MIDI",
-            "USE_QTDEBUG=0"
+            "NO_USE_MIDI"
         }
         EOF
 
@@ -84,7 +89,8 @@ jobs:
         cd mame-src
         export ANDROID_NDK_ROOT=${{ env.NDK_ROOT }}
         
-        make OSD=sdl TARGET=linux PTR64=1 NOWERROR=1 \
+        # 关键修复：强制禁用Qt
+        NO_USE_QT=1 NO_QT=1 make OSD=sdl TARGET=linux PTR64=1 NOWERROR=1 \
           CROSS_BUILD=1 TOOLS=0 REGENIE=1 \
           ARCHOPTS="-Wl,-soname,libMAME4droid.so -D__ANDROID__" \
           TARGET=mame SUBTARGET=tiny \
