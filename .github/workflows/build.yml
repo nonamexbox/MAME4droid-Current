@@ -80,21 +80,19 @@ jobs:
             sed -i '/NO_USE_MIDI/a\        "SDLMAME_ANDROID=1",\n        "__LIBRETRO__",\n        "LUA_COMPAT_ALL"' scripts/genie.lua
         fi
         
-        # 关键修复：完全禁用bimg和bgfx
-        sed -i 's/BGFX_BUILD_TOOLS=1/BGFX_BUILD_TOOLS=0/' scripts/genie.lua
-        sed -i 's/BGFX_BUILD_EXAMPLES=1/BGFX_BUILD_EXAMPLES=0/' scripts/genie.lua
-        sed -i 's/WITH_BGFX=1/WITH_BGFX=0/' scripts/genie.lua
-        sed -i 's/USE_BGFX=1/USE_BGFX=0/' scripts/genie.lua
+        # 关键修复：完全移除bimg和bgfx
+        rm -rf src/3rdparty/bgfx
+        rm -rf src/3rdparty/bimg
         
-        # 禁用bimg编译
-        sed -i 's/BIMG_BUILD_TOOLS=1/BIMG_BUILD_TOOLS=0/' scripts/genie.lua
-        sed -i 's/BIMG_BUILD_EXAMPLES=1/BIMG_BUILD_EXAMPLES=0/' scripts/genie.lua
+        # 修改构建脚本跳过这些组件
+        sed -i '/bgfx/d' scripts/genie.lua
+        sed -i '/bimg/d' scripts/genie.lua
         
         # 验证修改
         echo "修改后的genie.lua相关内容:"
         grep -A 10 "NO_USE_MIDI" scripts/genie.lua
-        grep -A 5 "BGFX_BUILD_TOOLS" scripts/genie.lua
-        grep -A 5 "BIMG_BUILD_TOOLS" scripts/genie.lua
+        echo "检查bgfx/bimg是否移除:"
+        ls -la src/3rdparty/
         
         true
 
@@ -109,7 +107,7 @@ jobs:
         cd mame-src
         export ANDROID_NDK_ROOT=${{ env.NDK_ROOT }}
         
-        # 关键修复：强制禁用所有bgfx/bimg组件
+        # 强制禁用所有bgfx/bimg组件
         NO_BGFX=1 NO_BIMG=1 NO_USE_QT=1 NO_X11=1 make OSD=sdl TARGET=linux PTR64=1 NOWERROR=1 \
           CROSS_BUILD=1 TOOLS=0 REGENIE=1 \
           ARCHOPTS="-Wl,-soname,libMAME4droid.so -D__ANDROID__" \
