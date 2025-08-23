@@ -46,24 +46,41 @@ jobs:
         # 使用正确的路径
         cp -r ./src/osd/myosd mame-src/src/osd/
 
-    - name: Apply essential patches
-      run: |
-        cat > mame-src/patch.diff << 'EOF'
-        diff --git a/scripts/genie.lua b/scripts/genie.lua
-        --- a/scripts/genie.lua
-        +++ b/scripts/genie.lua
-        @@ -302,6 +302,9 @@
-                defines {
-                        "NO_USE_MIDI",
-                        "USE_QTDEBUG=0",
-        +               "SDLMAME_ANDROID=1",
-        +               "__LIBRETRO__",
-        +               "LUA_COMPAT_ALL"
-                }
-         
-                -- disable exceptions
-        EOF
-        cd mame-src && patch -p1 < patch.diff
+- name: Apply essential patches
+  run: |
+    # 创建补丁文件
+    cat > mame-src/patch.diff << 'EOF'
+    diff --git a/scripts/genie.lua b/scripts/genie.lua
+    --- a/scripts/genie.lua
+    +++ b/scripts/genie.lua
+    @@ -300,8 +300,11 @@
+        -- common defines
+        defines {
+            "NO_USE_MIDI",
+    -        "USE_QTDEBUG=0",
+    +        "USE_QTDEBUG=0"
+        }
+    +    defines {
+    +        "SDLMAME_ANDROID=1"
+    +    }
+        
+        -- disable exceptions
+    EOF
+    
+    # 应用补丁或手动修改
+    cd mame-src
+    if patch -p1 < patch.diff; then
+        echo "补丁应用成功"
+        # 添加额外的定义
+        sed -i '/SDLMAME_ANDROID/a\        "__LIBRETRO__",\n        "LUA_COMPAT_ALL"' scripts/genie.lua
+    else
+        echo "补丁应用失败，手动添加所有定义"
+        sed -i '/NO_USE_MIDI/a\        "SDLMAME_ANDROID=1",\n        "__LIBRETRO__",\n        "LUA_COMPAT_ALL"' scripts/genie.lua
+    fi
+    
+    # 验证修改
+    echo "修改后的genie.lua相关内容:"
+    grep -A 10 "NO_USE_MIDI" scripts/genie.lua
 
     - name: Download Android NDK r21e
       run: |
