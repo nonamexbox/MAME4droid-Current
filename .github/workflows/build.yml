@@ -94,8 +94,8 @@ jobs:
         cd mame-src
         export ANDROID_NDK_ROOT=${{ env.NDK_ROOT }}
         
-        # 关键修复：使用tiny子目标
-        make OSD=myosd TARGET=linux PTR64=1 NOWERROR=1 \
+        # 关键修复：使用android作为OSD值
+        make OSD=android TARGET=linux PTR64=1 NOWERROR=1 \
           CROSS_BUILD=1 TOOLS=0 REGENIE=1 \
           ARCHOPTS="-Wl,-soname,libMAME4droid.so -D__ANDROID__" \
           TARGET=mame SUBTARGET=tiny \
