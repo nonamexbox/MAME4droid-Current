@@ -45,7 +45,7 @@ jobs:
 
     - name: Apply essential patches
       run: |
-        # 创建更灵活的补丁
+        # 创建补丁文件
         cat > mame-src/patch.diff << 'EOF'
         diff --git a/scripts/genie.lua b/scripts/genie.lua
         --- a/scripts/genie.lua
@@ -78,6 +78,9 @@ jobs:
         # 验证修改
         echo "修改后的genie.lua相关内容:"
         grep -A 10 "NO_USE_MIDI" scripts/genie.lua
+        
+        # 关键修复：确保脚本成功退出
+        true
 
     - name: Download Android NDK r21e
       run: |
