@@ -13,6 +13,9 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        # 关键修复：确保检出所有子模块
+        submodules: recursive
 
     - name: Set up JDK
       uses: actions/setup-java@v4
@@ -38,8 +41,10 @@ jobs:
 
     - name: Prepare OSD layer
       run: |
+        # 关键修复：确保目录存在
         mkdir -p mame-src/src/osd
-        cp -r android-MAME4droid/src/osd/myosd mame-src/src/osd/
+        # 使用正确的路径
+        cp -r ./src/osd/myosd mame-src/src/osd/
 
     - name: Apply essential patches
       run: |
@@ -60,7 +65,6 @@ jobs:
         EOF
         cd mame-src && patch -p1 < patch.diff
 
-    # 修复：使用正确的NDK安装方式
     - name: Download Android NDK r21e
       run: |
         wget https://dl.google.com/android/repository/android-ndk-r21e-linux-x86_64.zip
@@ -78,12 +82,12 @@ jobs:
           ANDROID_NDK_ROOT=${{ env.NDK_ROOT }} \
           -j2
         
-        mkdir -p ../android-MAME4droid/app/src/main/jniLibs/arm64-v8a
-        cp mamearcade64 ../android-MAME4droid/app/src/main/jniLibs/arm64-v8a/libMAME4droid.so
+        mkdir -p ../app/src/main/jniLibs/arm64-v8a
+        cp mamearcade64 ../app/src/main/jniLibs/arm64-v8a/libMAME4droid.so
 
     - name: Build Android APK
       run: |
-        cd android-MAME4droid
+        # 关键修复：使用正确的路径
         chmod +x gradlew
         ./gradlew assembleDebug --no-daemon --stacktrace
 
@@ -91,7 +95,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: MAME4droid-APK
-        path: android-MAME4droid/app/build/outputs/apk/debug/*.apk
+        path: app/build/outputs/apk/debug/*.apk
         retention-days: 7
 
     - name: Upload build logs (on failure)
@@ -101,4 +105,4 @@ jobs:
         name: build-logs
         path: |
           mame-src/compile.log
-          android-MAME4droid/app/build/**/logs/*.log
+          app/build/**/logs/*.log
