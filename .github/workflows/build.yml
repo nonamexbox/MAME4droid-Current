@@ -94,17 +94,17 @@ jobs:
         cd mame-src
         export ANDROID_NDK_ROOT=${{ env.NDK_ROOT }}
         
-        # 关键修复：使用arcade64作为SUBTARGET
+        # 关键修复：使用tiny子目标
         make OSD=myosd TARGET=linux PTR64=1 NOWERROR=1 \
           CROSS_BUILD=1 TOOLS=0 REGENIE=1 \
           ARCHOPTS="-Wl,-soname,libMAME4droid.so -D__ANDROID__" \
-          TARGET=mame SUBTARGET=arcade64 \
+          TARGET=mame SUBTARGET=tiny \
           ANDROID_ARCH=arm64 \
           -j2
         
         # 重命名输出文件
         mkdir -p ../app/src/main/jniLibs/arm64-v8a
-        cp mamearcade64 ../app/src/main/jniLibs/arm64-v8a/libMAME4droid.so
+        cp mametiny ../app/src/main/jniLibs/arm64-v8a/libMAME4droid.so
 
     - name: Build Android APK
       run: |
