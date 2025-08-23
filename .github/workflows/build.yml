@@ -45,7 +45,6 @@ jobs:
 
     - name: Apply essential patches
       run: |
-        # 关键修复：禁用-e选项的错误退出行为
         set +e
         
         # 创建补丁文件
@@ -72,7 +71,6 @@ jobs:
         patch -p1 < patch.diff
         if [ $? -eq 0 ]; then
             echo "补丁应用成功"
-            # 添加额外的定义
             sed -i '/SDLMAME_ANDROID/a\        "__LIBRETRO__",\n        "LUA_COMPAT_ALL"' scripts/genie.lua
         else
             echo "补丁应用失败，手动添加所有定义"
@@ -83,7 +81,6 @@ jobs:
         echo "修改后的genie.lua相关内容:"
         grep -A 10 "NO_USE_MIDI" scripts/genie.lua
         
-        # 确保脚本成功退出
         true
 
     - name: Download Android NDK r21e
@@ -96,13 +93,16 @@ jobs:
       run: |
         cd mame-src
         export ANDROID_NDK_ROOT=${{ env.NDK_ROOT }}
-        make OSD=myosd TARGETOS=android NOWERROR=1 \
+        
+        # 关键修复：使用正确的目标平台参数
+        make OSD=myosd TARGET=linux PTR64=1 NOWERROR=1 \
           CROSS_BUILD=1 TOOLS=0 REGENIE=1 \
           ARCHOPTS="-Wl,-soname,libMAME4droid.so -D__ANDROID__" \
           TARGET=mame SUBTARGET=arcade \
           ANDROID_ARCH=arm64 \
           -j2
         
+        # 重命名输出文件
         mkdir -p ../app/src/main/jniLibs/arm64-v8a
         cp mamearcade64 ../app/src/main/jniLibs/arm64-v8a/libMAME4droid.so
 
