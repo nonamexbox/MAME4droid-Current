@@ -94,17 +94,28 @@ jobs:
         cd mame-src
         export ANDROID_NDK_ROOT=${{ env.NDK_ROOT }}
         
-        # 关键修复：使用android作为OSD值
-        make OSD=android TARGET=linux PTR64=1 NOWERROR=1 \
-          CROSS_BUILD=1 TOOLS=0 REGENIE=1 \
-          ARCHOPTS="-Wl,-soname,libMAME4droid.so -D__ANDROID__" \
-          TARGET=mame SUBTARGET=tiny \
-          ANDROID_ARCH=arm64 \
-          -j2
+        # 尝试不同的OSD值
+        for osd_value in sdl retro none; do
+          echo "尝试使用 OSD=$osd_value"
+          make OSD=$osd_value TARGET=linux PTR64=1 NOWERROR=1 \
+            CROSS_BUILD=1 TOOLS=0 REGENIE=1 \
+            ARCHOPTS="-Wl,-soname,libMAME4droid.so -D__ANDROID__" \
+            TARGET=mame SUBTARGET=tiny \
+            ANDROID_ARCH=arm64 \
+            -j2
+          
+          if [ -f "mametiny" ]; then
+            echo "使用 OSD=$osd_value 构建成功"
+            mkdir -p ../app/src/main/jniLibs/arm64-v8a
+            cp mametiny ../app/src/main/jniLibs/arm64-v8a/libMAME4droid.so
+            break
+          fi
+        done
         
-        # 重命名输出文件
-        mkdir -p ../app/src/main/jniLibs/arm64-v8a
-        cp mametiny ../app/src/main/jniLibs/arm64-v8a/libMAME4droid.so
+        if [ ! -f "mametiny" ]; then
+          echo "错误：所有OSD值尝试均失败"
+          exit 1
+        fi
 
     - name: Build Android APK
       run: |
