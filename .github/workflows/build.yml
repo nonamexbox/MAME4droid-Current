@@ -94,11 +94,11 @@ jobs:
         cd mame-src
         export ANDROID_NDK_ROOT=${{ env.NDK_ROOT }}
         
-        # 关键修复：使用正确的目标平台参数
+        # 关键修复：使用arcade64作为SUBTARGET
         make OSD=myosd TARGET=linux PTR64=1 NOWERROR=1 \
           CROSS_BUILD=1 TOOLS=0 REGENIE=1 \
           ARCHOPTS="-Wl,-soname,libMAME4droid.so -D__ANDROID__" \
-          TARGET=mame SUBTARGET=arcade \
+          TARGET=mame SUBTARGET=arcade64 \
           ANDROID_ARCH=arm64 \
           -j2
         
