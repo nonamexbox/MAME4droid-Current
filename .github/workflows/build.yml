@@ -25,7 +25,11 @@ jobs:
     - name: Set up build environment
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential unzip python3 libsdl2-dev lua5.4
+        # 关键修复：添加必要的依赖
+        sudo apt-get install -y build-essential unzip python3 libsdl2-dev lua5.4 \
+          libfontconfig-dev qtbase5-dev pkg-config
+        
+        # 创建交换空间
         sudo fallocate -l 4G /swapfile
         sudo chmod 600 /swapfile
         sudo mkswap /swapfile
@@ -94,28 +98,17 @@ jobs:
         cd mame-src
         export ANDROID_NDK_ROOT=${{ env.NDK_ROOT }}
         
-        # 尝试不同的OSD值
-        for osd_value in sdl retro none; do
-          echo "尝试使用 OSD=$osd_value"
-          make OSD=$osd_value TARGET=linux PTR64=1 NOWERROR=1 \
-            CROSS_BUILD=1 TOOLS=0 REGENIE=1 \
-            ARCHOPTS="-Wl,-soname,libMAME4droid.so -D__ANDROID__" \
-            TARGET=mame SUBTARGET=tiny \
-            ANDROID_ARCH=arm64 \
-            -j2
-          
-          if [ -f "mametiny" ]; then
-            echo "使用 OSD=$osd_value 构建成功"
-            mkdir -p ../app/src/main/jniLibs/arm64-v8a
-            cp mametiny ../app/src/main/jniLibs/arm64-v8a/libMAME4droid.so
-            break
-          fi
-        done
+        # 关键修复：禁用QT和X11
+        NO_USE_QT=1 NO_X11=1 make OSD=sdl TARGET=linux PTR64=1 NOWERROR=1 \
+          CROSS_BUILD=1 TOOLS=0 REGENIE=1 \
+          ARCHOPTS="-Wl,-soname,libMAME4droid.so -D__ANDROID__" \
+          TARGET=mame SUBTARGET=tiny \
+          ANDROID_ARCH=arm64 \
+          -j2
         
-        if [ ! -f "mametiny" ]; then
-          echo "错误：所有OSD值尝试均失败"
-          exit 1
-        fi
+        # 重命名输出文件
+        mkdir -p ../app/src/main/jniLibs/arm64-v8a
+        cp mametiny ../app/src/main/jniLibs/arm64-v8a/libMAME4droid.so
 
     - name: Build Android APK
       run: |
@@ -129,7 +122,7 @@ jobs:
         path: app/build/outputs/apk/debug/*.apk
         retention-days: 7
 
-    - name: Upload build logs (on failure)
+    - name: Upload build logs
       if: ${{ failure() }}
       uses: actions/upload-artifact@v4
       with:
