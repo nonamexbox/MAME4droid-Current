@@ -14,7 +14,6 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        # 关键修复：确保检出所有子模块
         submodules: recursive
 
     - name: Set up JDK
@@ -41,46 +40,44 @@ jobs:
 
     - name: Prepare OSD layer
       run: |
-        # 关键修复：确保目录存在
         mkdir -p mame-src/src/osd
-        # 使用正确的路径
         cp -r ./src/osd/myosd mame-src/src/osd/
 
-- name: Apply essential patches
-  run: |
-    # 创建补丁文件
-    cat > mame-src/patch.diff << 'EOF'
-    diff --git a/scripts/genie.lua b/scripts/genie.lua
-    --- a/scripts/genie.lua
-    +++ b/scripts/genie.lua
-    @@ -300,8 +300,11 @@
-        -- common defines
-        defines {
-            "NO_USE_MIDI",
-    -        "USE_QTDEBUG=0",
-    +        "USE_QTDEBUG=0"
-        }
-    +    defines {
-    +        "SDLMAME_ANDROID=1"
-    +    }
+    - name: Apply essential patches
+      run: |
+        # 创建更灵活的补丁
+        cat > mame-src/patch.diff << 'EOF'
+        diff --git a/scripts/genie.lua b/scripts/genie.lua
+        --- a/scripts/genie.lua
+        +++ b/scripts/genie.lua
+        @@ -300,8 +300,11 @@
+            -- common defines
+            defines {
+                "NO_USE_MIDI",
+        -        "USE_QTDEBUG=0",
+        +        "USE_QTDEBUG=0"
+            }
+        +    defines {
+        +        "SDLMAME_ANDROID=1"
+        +    }
+            
+            -- disable exceptions
+        EOF
         
-        -- disable exceptions
-    EOF
-    
-    # 应用补丁或手动修改
-    cd mame-src
-    if patch -p1 < patch.diff; then
-        echo "补丁应用成功"
-        # 添加额外的定义
-        sed -i '/SDLMAME_ANDROID/a\        "__LIBRETRO__",\n        "LUA_COMPAT_ALL"' scripts/genie.lua
-    else
-        echo "补丁应用失败，手动添加所有定义"
-        sed -i '/NO_USE_MIDI/a\        "SDLMAME_ANDROID=1",\n        "__LIBRETRO__",\n        "LUA_COMPAT_ALL"' scripts/genie.lua
-    fi
-    
-    # 验证修改
-    echo "修改后的genie.lua相关内容:"
-    grep -A 10 "NO_USE_MIDI" scripts/genie.lua
+        # 应用补丁或手动修改
+        cd mame-src
+        if patch -p1 < patch.diff; then
+            echo "补丁应用成功"
+            # 添加额外的定义
+            sed -i '/SDLMAME_ANDROID/a\        "__LIBRETRO__",\n        "LUA_COMPAT_ALL"' scripts/genie.lua
+        else
+            echo "补丁应用失败，手动添加所有定义"
+            sed -i '/NO_USE_MIDI/a\        "SDLMAME_ANDROID=1",\n        "__LIBRETRO__",\n        "LUA_COMPAT_ALL"' scripts/genie.lua
+        fi
+        
+        # 验证修改
+        echo "修改后的genie.lua相关内容:"
+        grep -A 10 "NO_USE_MIDI" scripts/genie.lua
 
     - name: Download Android NDK r21e
       run: |
@@ -91,12 +88,12 @@ jobs:
     - name: Build libMAME4droid.so
       run: |
         cd mame-src
+        export ANDROID_NDK_ROOT=${{ env.NDK_ROOT }}
         make OSD=myosd TARGETOS=android NOWERROR=1 \
           CROSS_BUILD=1 TOOLS=0 REGENIE=1 \
           ARCHOPTS="-Wl,-soname,libMAME4droid.so -D__ANDROID__" \
           TARGET=mame SUBTARGET=arcade \
           ANDROID_ARCH=arm64 \
-          ANDROID_NDK_ROOT=${{ env.NDK_ROOT }} \
           -j2
         
         mkdir -p ../app/src/main/jniLibs/arm64-v8a
@@ -104,7 +101,6 @@ jobs:
 
     - name: Build Android APK
       run: |
-        # 关键修复：使用正确的路径
         chmod +x gradlew
         ./gradlew assembleDebug --no-daemon --stacktrace
 
