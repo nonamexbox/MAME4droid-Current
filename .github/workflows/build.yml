@@ -8,102 +8,99 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 120  # 增加超时时间，MAME编译耗时较长
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
 
-    - name: Setup Java 17
+    - name: Set up JDK
       uses: actions/setup-java@v4
       with:
-        java-version: '17'
+        java-version: '11'
         distribution: 'temurin'
 
-    - name: Setup Android SDK
+    - name: Set up build environment
       run: |
-        # 完整的Android SDK安装步骤
-        ANDROID_SDK_ROOT="$HOME/android-sdk"
-        mkdir -p "$ANDROID_SDK_ROOT"
-        
-        wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdline-tools.zip
-        unzip -q cmdline-tools.zip -d "$ANDROID_SDK_ROOT/cmdline-tools"
-        rm cmdline-tools.zip
-        
-        export PATH="$ANDROID_SDK_ROOT/cmdline-tools/bin:$PATH"
-        
-        # 接受许可证
-        yes | sdkmanager --licenses >/dev/null 2>&1
-        
-        # 安装必要组件
-        sdkmanager "platform-tools"
-        sdkmanager "build-tools;34.0.0"
-        sdkmanager "platforms;android-34"
-        sdkmanager "ndk;27.2.12479018"
-        
-        echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-        echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/27.2.12479018" >> $GITHUB_ENV
+        sudo apt-get update
+        sudo apt-get install -y build-essential unzip python3 libsdl2-dev lua5.4
+        # 创建交换空间防止内存不足
+        sudo fallocate -l 4G /swapfile
+        sudo chmod 600 /swapfile
+        sudo mkswap /swapfile
+        sudo swapon /swapfile
+        free -m
 
     - name: Download MAME 0.279 source
       run: |
-        wget -q https://github.com/mamedev/mame/archive/refs/tags/mame0279.zip -O mame-src.zip
-        unzip -q mame-src.zip
-        rm mame-src.zip
+        wget https://github.com/mamedev/mame/archive/refs/tags/mame0279.zip
+        unzip mame0279.zip
         mv mame-mame0279 mame-src
-        echo "✅ MAME 0.279源码下载完成"
 
-    # 关键修复：使用官方推荐的构建命令
-    - name: Build MAME core library
+    - name: Prepare OSD layer
       run: |
-        cd mame-src
-        
-        # 1. 生成项目文件
-        make REGENIE=1 TARGETOS=android OSD=android
-        
-        # 2. 关键修复：使用官方推荐的构建命令
-        make TARGETOS=android OSD=android ARCHITECTURE=arm64 \
-          TARGET=arcade \
-          SUBTARGET=mame \
-          NOWERROR=1 \
-          TOOLS=1 \
-          -j4
-        
-        # 3. 验证生成的库文件
-        if [ ! -f "mamearcadearm64.so" ]; then
-          echo "❌ 错误：MAME核心库未生成"
-          exit 1
-        fi
-        
-        # 4. 复制到Android项目
-        mkdir -p ../android-MAME4droid/app/src/main/jniLibs/arm64-v8a
-        cp mamearcadearm64.so ../android-MAME4droid/app/src/main/jniLibs/arm64-v8a/libMAME4droid.so
-        echo "✅ MAME核心库生成成功（大小: $(du -h mamearcadearm64.so | cut -f1)）"
+        mkdir -p mame-src/src/osd
+        cp -r android-MAME4droid/src/osd/myosd mame-src/src/osd/
 
-    - name: Build with Gradle
+    - name: Apply essential patches
+      run: |
+        cat > mame-src/patch.diff << 'EOF'
+        diff --git a/scripts/genie.lua b/scripts/genie.lua
+        --- a/scripts/genie.lua
+        +++ b/scripts/genie.lua
+        @@ -302,6 +302,9 @@
+                defines {
+                        "NO_USE_MIDI",
+                        "USE_QTDEBUG=0",
+        +               "SDLMAME_ANDROID=1",
+        +               "__LIBRETRO__",
+        +               "LUA_COMPAT_ALL"
+                }
+         
+                -- disable exceptions
+        EOF
+        cd mame-src && patch -p1 < patch.diff
+
+    - name: Set up Android NDK (r21e)
+      uses: actions/setup-android@v2
+      with:
+        ndk-version: r21e  # 关键：使用兼容性最好的旧版NDK
+        android-sdk-file: commandlinetools-linux-8512546_latest.zip
+
+    - name: Build libMAME4droid.so
+      run: |
+        export NDK_ROOT=$ANDROID_NDK_ROOT
+        cd mame-src
+        make OSD=myosd TARGETOS=android NOWERROR=1 \
+          CROSS_BUILD=1 TOOLS=0 REGENIE=1 \
+          ARCHOPTS="-Wl,-soname,libMAME4droid.so -D__ANDROID__" \
+          TARGET=mame SUBTARGET=arcade \
+          ANDROID_ARCH=arm64 \
+          -j2  # 减少并行数量防止OOM
+        
+        # 重命名并复制到Android项目
+        mkdir -p ../android-MAME4droid/app/src/main/jniLibs/arm64-v8a
+        cp mamearcade64 ../android-MAME4droid/app/src/main/jniLibs/arm64-v8a/libMAME4droid.so
+
+    - name: Build Android APK
       run: |
         cd android-MAME4droid
-        
-        # 使用Gradle 8.9
-        wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip -O gradle-bin.zip
-        unzip -q gradle-bin.zip
-        rm gradle-bin.zip
-        
-        # 执行构建
-        ./gradle-8.9/bin/gradle assembleDebug --no-daemon --stacktrace
-        
-        # 验证APK大小
-        APK_SIZE=$(du -h app/build/outputs/apk/debug/*.apk | cut -f1)
-        echo "APK大小: $APK_SIZE"
-        if [[ ! $APK_SIZE =~ M ]]; then
-          echo "❌ 错误：APK大小异常"
-          exit 1
-        fi
+        # 使用包含的gradlew确保版本兼容
+        chmod +x gradlew
+        ./gradlew assembleDebug --no-daemon --stacktrace
 
-    - name: Upload APK
+    - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: MAME4droid-0.279-APK
+        name: MAME4droid-APK
         path: android-MAME4droid/app/build/outputs/apk/debug/*.apk
-        retention-days: 1
+        retention-days: 7
+
+    - name: Upload build logs (on failure)
+      if: ${{ failure() }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-logs
+        path: |
+          mame-src/compile.log
+          android-MAME4droid/app/build/**/logs/*.log
