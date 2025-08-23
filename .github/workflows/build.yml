@@ -8,7 +8,7 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 120  # 增加超时时间，MAME编译耗时较长
+    timeout-minutes: 120
 
     steps:
     - name: Checkout repository
@@ -24,7 +24,6 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y build-essential unzip python3 libsdl2-dev lua5.4
-        # 创建交换空间防止内存不足
         sudo fallocate -l 4G /swapfile
         sudo chmod 600 /swapfile
         sudo mkswap /swapfile
@@ -61,31 +60,30 @@ jobs:
         EOF
         cd mame-src && patch -p1 < patch.diff
 
-    - name: Set up Android NDK (r21e)
-      uses: actions/setup-android@v2
-      with:
-        ndk-version: r21e  # 关键：使用兼容性最好的旧版NDK
-        android-sdk-file: commandlinetools-linux-8512546_latest.zip
+    # 修复：使用正确的NDK安装方式
+    - name: Download Android NDK r21e
+      run: |
+        wget https://dl.google.com/android/repository/android-ndk-r21e-linux-x86_64.zip
+        unzip android-ndk-r21e-linux-x86_64.zip
+        echo "NDK_ROOT=$(pwd)/android-ndk-r21e" >> $GITHUB_ENV
 
     - name: Build libMAME4droid.so
       run: |
-        export NDK_ROOT=$ANDROID_NDK_ROOT
         cd mame-src
         make OSD=myosd TARGETOS=android NOWERROR=1 \
           CROSS_BUILD=1 TOOLS=0 REGENIE=1 \
           ARCHOPTS="-Wl,-soname,libMAME4droid.so -D__ANDROID__" \
           TARGET=mame SUBTARGET=arcade \
           ANDROID_ARCH=arm64 \
-          -j2  # 减少并行数量防止OOM
+          ANDROID_NDK_ROOT=${{ env.NDK_ROOT }} \
+          -j2
         
-        # 重命名并复制到Android项目
         mkdir -p ../android-MAME4droid/app/src/main/jniLibs/arm64-v8a
         cp mamearcade64 ../android-MAME4droid/app/src/main/jniLibs/arm64-v8a/libMAME4droid.so
 
     - name: Build Android APK
       run: |
         cd android-MAME4droid
-        # 使用包含的gradlew确保版本兼容
         chmod +x gradlew
         ./gradlew assembleDebug --no-daemon --stacktrace
 
